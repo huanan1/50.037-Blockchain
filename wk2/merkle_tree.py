@@ -117,15 +117,15 @@ def verify_proof(entry, proof, root):
     return False
 
 
-#  TESTS 
-merkletree = MerkleTree()
+# #  TESTS 
+# merkletree = MerkleTree()
 
-for i in range(8):
-    merkletree.add(random.randint(100, 1000))
-merkletree.add(453)
-for i in range(50):
-    merkletree.add(random.randint(100, 1000))
+# for i in range(8):
+#     merkletree.add(random.randint(100, 1000))
+# merkletree.add(453)
+# for i in range(50):
+#     merkletree.add(random.randint(100, 1000))
 
-merkletree.build()
-# print(merkletree.get_proof(453))
-print(verify_proof(453, merkletree.get_proof(453), merkletree.get_root()))
+# merkletree.build()
+# # print(merkletree.get_proof(453))
+# print(verify_proof(453, merkletree.get_proof(453), merkletree.get_root()))
