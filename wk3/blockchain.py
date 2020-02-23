@@ -33,6 +33,7 @@ class Block:
 class BlockChain:
     chain = dict()
     TARGET = b"\x00\x00\x0f\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+    last_hash = None
 
     def add(self, block):
         # Checks if block is valid before adding
@@ -64,6 +65,7 @@ class BlockChain:
         # Start DP function
         cleaned_keys = self.resolve_DP(
             genesis_hash_value, 0, [genesis_hash_value])[1]
+        self.last_hash = cleaned_keys[-1]
         # Recreates chain based on output of DP function
         for i in self.chain:
             if i in cleaned_keys:
