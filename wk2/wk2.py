@@ -58,7 +58,12 @@ class BlockChain:
             if self.chain[hash_value].previous_header_hash == None:
                 genesis_hash_value = hash_value
                 break
-        return self.resolve_DP(genesis_hash_value, 0, [genesis_hash_value])
+        cleaned_chain = dict()
+        cleaned_keys = self.resolve_DP(genesis_hash_value, 0, [genesis_hash_value])[1]
+        for i in self.chain:
+            if i in cleaned_keys:
+                cleaned_chain[i] = self.chain[i]
+        self.chain = copy.deepcopy(cleaned_chain)
 
     def resolve_DP(self, hash_check, score, cleared_hashes):
         list_of_linked_hashes = [(score, cleared_hashes)]
@@ -66,9 +71,7 @@ class BlockChain:
             if self.chain[hash_value].previous_header_hash == hash_check:
                 new_cleared_hashes = copy.deepcopy(cleared_hashes)
                 new_cleared_hashes.append(hash_value)
-                print(new_cleared_hashes)
                 list_of_linked_hashes.append(self.resolve_DP(hash_value, score + 1, new_cleared_hashes))
-
         highest_score = 0
         for i in list_of_linked_hashes:
             if i[0] > highest_score:
@@ -125,4 +128,6 @@ for i in range(6):
             break
     print(blockchain)
 
-print('asda', blockchain.resolve())
+blockchain.resolve()
+print("Done resolve")
+print(blockchain)
