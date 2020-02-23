@@ -5,6 +5,7 @@ import time
 import binascii
 import copy
 
+
 class Block:
     def __init__(self, transactions, previous_header_hash, hash_tree_root, timestamp, nonce):
         # Instantiates object from passed values
@@ -62,7 +63,8 @@ class BlockChain:
         # Create a new chain
         cleaned_chain = dict()
         # Start DP function
-        cleaned_keys = self.resolve_DP(genesis_hash_value, 0, [genesis_hash_value])[1]
+        cleaned_keys = self.resolve_DP(
+            genesis_hash_value, 0, [genesis_hash_value])[1]
         # Recreates chain based on output of DP function
         for i in self.chain:
             if i in cleaned_keys:
@@ -78,7 +80,8 @@ class BlockChain:
                 new_cleared_hashes = copy.deepcopy(cleared_hashes)
                 new_cleared_hashes.append(hash_value)
                 # Increase score and list of cleared_hashes whenever the DP is called
-                list_of_linked_hashes.append(self.resolve_DP(hash_value, score + 1, new_cleared_hashes))
+                list_of_linked_hashes.append(self.resolve_DP(
+                    hash_value, score + 1, new_cleared_hashes))
         # Scans the list_of_linked_hashes and only return the longest chain
         highest_score = 0
         for i in list_of_linked_hashes:
