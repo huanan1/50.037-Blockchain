@@ -1,0 +1,13 @@
+import hashlib
+m = hashlib.sha256()
+m.update(b"Blockchain Technology")
+print(m.digest())
+m = hashlib.sha512()
+m.update(b"Blockchain Technology")
+print(m.digest())
+m = hashlib.sha3_256()
+m.update(b"Blockchain Technology")
+print(m.digest())
+m = hashlib.sha3_512()
+m.update(b"Blockchain Technology")
+print(m.digest())
