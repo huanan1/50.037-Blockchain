@@ -3,7 +3,7 @@ import hashlib
 import random
 import time
 import binascii
-
+import copy
 
 class Block:
     def __init__(self, transactions, previous_header_hash, hash_tree_root, timestamp, nonce):
@@ -61,25 +61,21 @@ class BlockChain:
         return self.resolve_DP(genesis_hash_value, 0, [genesis_hash_value])
 
     def resolve_DP(self, hash_check, score, cleared_hashes):
-        score_list = [(score,[hash_check])]
-        list_of_cleared_hashes_new=[[hash_check]]
+        list_of_linked_hashes = [(score, cleared_hashes)]
         for hash_value in self.chain:
-            cleared_hashes_new = cleared_hashes
             if self.chain[hash_value].previous_header_hash == hash_check:
-                score += 1
-                cleared_hashes_new.append(hash_value)
-                list_of_cleared_hashes_new.append(cleared_hashes_new)
-                score_list.append(self.resolve_DP(
-                    hash_value, score, cleared_hashes_new))
+                new_cleared_hashes = copy.deepcopy(cleared_hashes)
+                new_cleared_hashes.append(hash_value)
+                print(new_cleared_hashes)
+                list_of_linked_hashes.append(self.resolve_DP(hash_value, score + 1, new_cleared_hashes))
+
         highest_score = 0
-        print(score_list)
-        for i in score_list:
-            if i[0][0] > highest_score:
+        for i in list_of_linked_hashes:
+            if i[0] > highest_score:
                 highest_score = i[0]
-        for count,i in enumerate(score_list):
-            if i[0][0] == highest_score:
-                print(count, list_of_cleared_hashes_new)
-                return(i, list_of_cleared_hashes_new[count])
+        for i in list_of_linked_hashes:
+            if i[0] == highest_score:
+                return i
 
     def __str__(self):
         reply = "-----------------\nThere are {} blocks in the blockchain\n\n".format(
@@ -113,7 +109,7 @@ for nonce in range(10000000):
 print(blockchain)
 
 # Other blocks (non-linear)
-for i in range(2):
+for i in range(6):
     merkletree = MerkleTree()
     for i in range(100):
         merkletree.add(random.randint(100, 1000))
@@ -129,4 +125,4 @@ for i in range(2):
             break
     print(blockchain)
 
-print(1, blockchain.resolve())
+print('asda', blockchain.resolve())
