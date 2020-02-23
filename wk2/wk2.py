@@ -32,7 +32,6 @@ class Block:
 
 class BlockChain:
     chain = dict()
-    # Last_hash is the last header hash value in the chain
     TARGET = b"\x00\x00\x0f\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
 
     def add(self, block):
@@ -105,40 +104,45 @@ class BlockChain:
 
 
 # Test
+def main():
+    # Create blockchain
+    blockchain = BlockChain()
 
-# Chreate blockchain
-blockchain = BlockChain()
-
-# Genesis block
-merkletree = MerkleTree()
-for i in range(100):
-    merkletree.add(random.randint(100, 1000))
-merkletree.build()
-current_time = str(time.time())
-for nonce in range(10000000):
-    block = Block(merkletree, None, merkletree.get_root(), current_time, nonce)
-    # If the add is successful, stop loop
-    if blockchain.add(block):
-        break
-print(blockchain)
-
-# Other blocks (non-linear)
-for i in range(6):
+    # Genesis block
     merkletree = MerkleTree()
     for i in range(100):
         merkletree.add(random.randint(100, 1000))
     merkletree.build()
     current_time = str(time.time())
-    last_hash = random.choice(
-        list(blockchain.chain.keys()))
     for nonce in range(10000000):
-        block = Block(merkletree, last_hash,
-                      merkletree.get_root(), current_time, nonce)
+        block = Block(merkletree, None, merkletree.get_root(), current_time, nonce)
+        # If the add is successful, stop loop
         if blockchain.add(block):
-            # If the add is successful, stop loop
             break
     print(blockchain)
 
-blockchain.resolve()
-print("Done resolve")
-print(blockchain)
+    # Other blocks (non-linear)
+    for i in range(6):
+        merkletree = MerkleTree()
+        for i in range(100):
+            merkletree.add(random.randint(100, 1000))
+        merkletree.build()
+        current_time = str(time.time())
+        last_hash = random.choice(
+            list(blockchain.chain.keys()))
+        for nonce in range(10000000):
+            block = Block(merkletree, last_hash,
+                        merkletree.get_root(), current_time, nonce)
+            if blockchain.add(block):
+                # If the add is successful, stop loop
+                break
+        print(blockchain)
+
+    blockchain.resolve()
+    print("Done resolve")
+    print(blockchain)
+
+
+
+if __name__ == '__main__':
+    main()
