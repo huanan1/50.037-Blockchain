@@ -56,22 +56,30 @@ class BlockChain:
     def resolve(self):
         for hash_value in self.chain:
             if self.chain[hash_value].previous_header_hash == None:
+                # Find the genesis block's hash value
                 genesis_hash_value = hash_value
                 break
+        # Create a new chain
         cleaned_chain = dict()
+        # Start DP function
         cleaned_keys = self.resolve_DP(genesis_hash_value, 0, [genesis_hash_value])[1]
+        # Recreates chain based on output of DP function
         for i in self.chain:
             if i in cleaned_keys:
                 cleaned_chain[i] = self.chain[i]
         self.chain = copy.deepcopy(cleaned_chain)
 
     def resolve_DP(self, hash_check, score, cleared_hashes):
+        # Assuming this is the last block in the chain, it first saves itself to the list
         list_of_linked_hashes = [(score, cleared_hashes)]
+        # Scans the chain for a block with previous_header of the header of the previous block that called the DP
         for hash_value in self.chain:
             if self.chain[hash_value].previous_header_hash == hash_check:
                 new_cleared_hashes = copy.deepcopy(cleared_hashes)
                 new_cleared_hashes.append(hash_value)
+                # Increase score and list of cleared_hashes whenever the DP is called
                 list_of_linked_hashes.append(self.resolve_DP(hash_value, score + 1, new_cleared_hashes))
+        # Scans the list_of_linked_hashes and only return the longest chain
         highest_score = 0
         for i in list_of_linked_hashes:
             if i[0] > highest_score:
