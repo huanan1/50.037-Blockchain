@@ -53,6 +53,34 @@ class BlockChain:
             # If Genesis block, there is no need to check for the last hash value
             return block.header_hash() < self.TARGET
 
+    def resolve(self):
+        for hash_value in self.chain:
+            if self.chain[hash_value].previous_header_hash == None:
+                genesis_hash_value = hash_value
+                break
+        return self.resolve_DP(genesis_hash_value, 0, [genesis_hash_value])
+
+    def resolve_DP(self, hash_check, score, cleared_hashes):
+        score_list = [(score,[hash_check])]
+        list_of_cleared_hashes_new=[[hash_check]]
+        for hash_value in self.chain:
+            cleared_hashes_new = cleared_hashes
+            if self.chain[hash_value].previous_header_hash == hash_check:
+                score += 1
+                cleared_hashes_new.append(hash_value)
+                list_of_cleared_hashes_new.append(cleared_hashes_new)
+                score_list.append(self.resolve_DP(
+                    hash_value, score, cleared_hashes_new))
+        highest_score = 0
+        print(score_list)
+        for i in score_list:
+            if i[0][0] > highest_score:
+                highest_score = i[0]
+        for count,i in enumerate(score_list):
+            if i[0][0] == highest_score:
+                print(count, list_of_cleared_hashes_new)
+                return(i, list_of_cleared_hashes_new[count])
+
     def __str__(self):
         reply = "-----------------\nThere are {} blocks in the blockchain\n\n".format(
             len(self.chain))
@@ -84,8 +112,8 @@ for nonce in range(10000000):
         break
 print(blockchain)
 
-# Other blocks
-while True:
+# Other blocks (non-linear)
+for i in range(2):
     merkletree = MerkleTree()
     for i in range(100):
         merkletree.add(random.randint(100, 1000))
@@ -93,8 +121,6 @@ while True:
     current_time = str(time.time())
     last_hash = random.choice(
         list(blockchain.chain.keys()))
-    # last_hash = binascii.unhexlify(random.choice(
-    #     list(blockchain.chain.keys())).encode())
     for nonce in range(10000000):
         block = Block(merkletree, last_hash,
                       merkletree.get_root(), current_time, nonce)
@@ -102,3 +128,5 @@ while True:
             # If the add is successful, stop loop
             break
     print(blockchain)
+
+print(1, blockchain.resolve())
