@@ -33,6 +33,17 @@ class Block:
 class BlockChain:
     chain = dict()
     TARGET = b"\x00\x00\x0f\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+    last_hash = None
+    # Cleaned keys is an ordered list of all the header hashes, only updated on BlockChain.resolve() call
+    cleaned_keys = []
+    # Target average time in seconds
+    target_average_time = 3.5
+    # difficulty_constant not used yet
+    difficulty_constant = None
+    # difficulty_interval is the difficulty check per X number of blocks
+    difficulty_interval = 5
+    # difficulty multiplier, ensures difficulty change is linear
+    difficulty_multiplier = 1
 
     def add(self, block):
         # Checks if block is valid before adding
@@ -62,11 +73,12 @@ class BlockChain:
         # Create a new chain
         cleaned_chain = dict()
         # Start DP function
-        cleaned_keys = self.resolve_DP(
+        self.cleaned_keys = self.resolve_DP(
             genesis_hash_value, 0, [genesis_hash_value])[1]
+        self.last_hash = self.cleaned_keys[-1]
         # Recreates chain based on output of DP function
         for i in self.chain:
-            if i in cleaned_keys:
+            if i in self.cleaned_keys:
                 cleaned_chain[i] = self.chain[i]
         self.chain = copy.deepcopy(cleaned_chain)
 
@@ -102,6 +114,34 @@ class BlockChain:
                 str(i), str(self.chain[i].previous_header_hash))
         return reply
 
+    def last_block(self):
+        if not None:
+            return self.chain[self.last]
+        else:
+            return None
+
+    def difficulty_adjust(self):
+        # Length of TARGET byte object
+        TARGET_length = 16
+        # Because we are basing on cleaned_keys list, we need to make sure chain and cleaned_list are the same
+        if len(self.chain) != len(self.cleaned_keys):
+            self.resolve()
+        no_of_blocks = len(self.cleaned_keys)
+        # Every X number of blocks, run difficulty check
+        if no_of_blocks % self.difficulty_interval == 0 and no_of_blocks > 0:
+            if no_of_blocks >= self.difficulty_interval:
+                # Get average time difference across X number of blocks
+                time_diff = float(self.chain[self.cleaned_keys[-1]].timestamp) - \
+                    float(self.chain[self.cleaned_keys[-5]].timestamp)
+                average_time = time_diff/self.difficulty_interval
+                # Change target depending on how the time average
+                TARGET_int = int.from_bytes(self.TARGET, 'big')
+                TARGET_int += int((self.target_average_time -
+                                   average_time) * self.difficulty_multiplier)
+                # todo limits and max/min
+                self.TARGET = TARGET_int.to_bytes(16, 'big')
+                print("Target adjusted:" + str(self.TARGET))
+
 
 # Test
 def main():
@@ -115,7 +155,8 @@ def main():
     merkletree.build()
     current_time = str(time.time())
     for nonce in range(10000000):
-        block = Block(merkletree, None, merkletree.get_root(), current_time, nonce)
+        block = Block(merkletree, None, merkletree.get_root(),
+                      current_time, nonce)
         # If the add is successful, stop loop
         if blockchain.add(block):
             break
@@ -132,7 +173,7 @@ def main():
             list(blockchain.chain.keys()))
         for nonce in range(10000000):
             block = Block(merkletree, last_hash,
-                        merkletree.get_root(), current_time, nonce)
+                          merkletree.get_root(), current_time, nonce)
             if blockchain.add(block):
                 # If the add is successful, stop loop
                 break
@@ -141,7 +182,6 @@ def main():
     blockchain.resolve()
     print("Done resolve")
     print(blockchain)
-
 
 
 if __name__ == '__main__':
