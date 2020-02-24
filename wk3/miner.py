@@ -52,6 +52,7 @@ while True:
         miner1_status = miner1.mine(merkletree)
         miner2_status = miner2.mine(merkletree)
         miner3_status = miner3.mine(merkletree)
+        # Right now, each miner copies the entire chain from another miner... maybe do block?
         if miner1_status:
             miner2.new_block(miner1.blockchain.chain)
             miner3.new_block(miner1.blockchain.chain)
