@@ -18,18 +18,20 @@ class Miner:
                       merkletree.get_root(), self.current_time, self.nonce)
         if self.blockchain.add(block):
             # If the add is successful, reset
-            self.new_block(self.blockchain)
+            self.new_block(self.blockchain.chain)
             return True
         self.nonce += 1
         # print(block.header_hash())
         return False
 
-    def new_block(self, blockchain):
+    def new_block(self, chain):
         self.nonce = 0
-        blockchain.resolve()
         self.current_time = str(time.time())
-        self.blockchain = copy.deepcopy(blockchain)
+        self.blockchain.chain = copy.deepcopy(chain)
+        self.blockchain.resolve()
         # need to include proper checks
+        # check should be in here or resolve?
+        self.blockchain.difficulty_adjust()
 
 
 def create_sample_merkle():
@@ -51,12 +53,12 @@ while True:
         miner2_status = miner2.mine(merkletree)
         miner3_status = miner3.mine(merkletree)
         if miner1_status:
-            miner2.new_block(miner1.blockchain)
-            miner3.new_block(miner1.blockchain)
+            miner2.new_block(miner1.blockchain.chain)
+            miner3.new_block(miner1.blockchain.chain)
         elif miner2_status:
-            miner1.new_block(miner2.blockchain)
-            miner3.new_block(miner2.blockchain)
+            miner1.new_block(miner2.blockchain.chain)
+            miner3.new_block(miner2.blockchain.chain)
         elif miner3_status:
-            miner1.new_block(miner3.blockchain)
-            miner2.new_block(miner3.blockchain)
-    print(miner1.blockchain, miner2.blockchain, miner3.blockchain)
+            miner1.new_block(miner3.blockchain.chain)
+            miner2.new_block(miner3.blockchain.chain)
+    print(miner1.blockchain)

@@ -34,6 +34,14 @@ class BlockChain:
     chain = dict()
     TARGET = b"\x00\x00\x0f\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
     last_hash = None
+    cleaned_keys = []
+    target_average_time = 3.5
+    # difficulty_constant not used yet
+    difficulty_constant = None
+    # difficulty_interval is the difficulty check per X number of blocks
+    difficulty_interval = 5
+    # difficulty multiplier, ensures difficulty change is linear
+    difficulty_multiplier = 1
 
     def add(self, block):
         # Checks if block is valid before adding
@@ -63,12 +71,12 @@ class BlockChain:
         # Create a new chain
         cleaned_chain = dict()
         # Start DP function
-        cleaned_keys = self.resolve_DP(
+        self.cleaned_keys = self.resolve_DP(
             genesis_hash_value, 0, [genesis_hash_value])[1]
-        self.last_hash = cleaned_keys[-1]
+        self.last_hash = self.cleaned_keys[-1]
         # Recreates chain based on output of DP function
         for i in self.chain:
-            if i in cleaned_keys:
+            if i in self.cleaned_keys:
                 cleaned_chain[i] = self.chain[i]
         self.chain = copy.deepcopy(cleaned_chain)
 
@@ -103,6 +111,29 @@ class BlockChain:
             reply += "\tHeader: {}\tPrev_header: {}\n".format(
                 str(i), str(self.chain[i].previous_header_hash))
         return reply
+
+    def last_block(self):
+        if not None:
+            return self.chain[self.last]
+        else:
+            return None
+
+    def difficulty_adjust(self):
+        TARGET_length = 16
+        if len(self.chain) != len(self.cleaned_keys):
+            self.resolve()
+        no_of_blocks = len(self.cleaned_keys)
+        if no_of_blocks % self.difficulty_interval == 0 and no_of_blocks > 0:
+            if no_of_blocks >= self.difficulty_interval:
+                time_diff = float(self.chain[self.cleaned_keys[-1]].timestamp) - \
+                    float(self.chain[self.cleaned_keys[-5]].timestamp)
+                average_time = time_diff/self.difficulty_interval
+                TARGET_int = int.from_bytes(self.TARGET, 'big')
+                TARGET_int += int((self.target_average_time -
+                                   average_time) * self.difficulty_multiplier)
+                # todo limits and max/min
+                self.TARGET = TARGET_int.to_bytes(16, 'big')
+                print("Target adjusted:" + str(self.TARGET))
 
 
 # Test
