@@ -29,7 +29,7 @@ class Miner:
         self.current_time = str(time.time())
         self.blockchain.chain = copy.deepcopy(chain)
         self.blockchain.resolve()
-        # need to include proper checks
+        # need to include proper checks when new block is added
         # check should be in here or resolve?
         self.blockchain.difficulty_adjust()
 

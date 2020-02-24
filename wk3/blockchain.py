@@ -34,7 +34,9 @@ class BlockChain:
     chain = dict()
     TARGET = b"\x00\x00\x0f\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
     last_hash = None
+    # Cleaned keys is an ordered list of all the header hashes, only updated on BlockChain.resolve() call
     cleaned_keys = []
+    # Target average time in seconds
     target_average_time = 3.5
     # difficulty_constant not used yet
     difficulty_constant = None
@@ -119,15 +121,20 @@ class BlockChain:
             return None
 
     def difficulty_adjust(self):
+        # Length of TARGET byte object
         TARGET_length = 16
+        # Because we are basing on cleaned_keys list, we need to make sure chain and cleaned_list are the same
         if len(self.chain) != len(self.cleaned_keys):
             self.resolve()
         no_of_blocks = len(self.cleaned_keys)
+        # Every X number of blocks, run difficulty check
         if no_of_blocks % self.difficulty_interval == 0 and no_of_blocks > 0:
             if no_of_blocks >= self.difficulty_interval:
+                # Get average time difference across X number of blocks
                 time_diff = float(self.chain[self.cleaned_keys[-1]].timestamp) - \
                     float(self.chain[self.cleaned_keys[-5]].timestamp)
                 average_time = time_diff/self.difficulty_interval
+                # Change target depending on how the time average
                 TARGET_int = int.from_bytes(self.TARGET, 'big')
                 TARGET_int += int((self.target_average_time -
                                    average_time) * self.difficulty_multiplier)
