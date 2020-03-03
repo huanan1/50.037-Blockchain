@@ -13,7 +13,7 @@ class Block:
         self.previous_header_hash = previous_header_hash  # Previous hash in string
         self.hash_tree_root = hash_tree_root  # tree root in bytes
         self.timestamp = timestamp  # unix time in string
-        self.nonce = nonce  # nonce in int
+        self.nonce = nonce  # nonce in int; required to generate PoW
 
     def header_hash(self):
         # Creates header value
@@ -31,7 +31,7 @@ class Block:
 
 
 class BlockChain:
-    chain = dict()
+    chain = dict() # hash: block
     TARGET = b"\x00\x00\x0f\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
 
     def add(self, block):
@@ -54,6 +54,9 @@ class BlockChain:
             return block.header_hash() < self.TARGET
 
     def resolve(self):
+        '''
+        resolve ensures the longest chain is stored in the blockchain
+        '''
         for hash_value in self.chain:
             if self.chain[hash_value].previous_header_hash == None:
                 # Find the genesis block's hash value
@@ -122,12 +125,13 @@ def main():
     print(blockchain)
 
     # Other blocks (non-linear)
-    for i in range(6):
+    for i in range(3):
         merkletree = MerkleTree()
         for i in range(100):
             merkletree.add(random.randint(100, 1000))
         merkletree.build()
         current_time = str(time.time())
+        # choose a random last block to append to
         last_hash = random.choice(
             list(blockchain.chain.keys()))
         for nonce in range(10000000):
