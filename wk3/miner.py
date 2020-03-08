@@ -5,6 +5,10 @@ import random
 import time
 import copy
 
+MY_IP = "$MY_IP_HERE"
+LIST_OF_MINER_IP = "$LIST_OF_MINER_IP_HERE"
+# MY_IP will be a single string in the form of "127.0.0.1:5000"
+# LIST_OF_MINER_IP will be a list of strings in the form of ["127.0.0.1:5000","127.0.0.1:5001","127.0.0.1:5002"]
 
 class Miner:
 
@@ -19,6 +23,7 @@ class Miner:
         if self.blockchain.add(block):
             # If the add is successful, reset
             self.new_block(self.blockchain.chain)
+            print(MY_IP)
             return True
         self.nonce += 1
         # print(block.header_hash())
@@ -33,7 +38,7 @@ class Miner:
         # check should be in here or resolve?
         self.blockchain.difficulty_adjust()
 
-
+# Random Merkletree
 def create_sample_merkle():
     merkletree = MerkleTree()
     for i in range(100):
