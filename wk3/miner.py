@@ -7,6 +7,8 @@ import copy
 
 MY_IP = "$MY_IP_HERE"
 LIST_OF_MINER_IP = "$LIST_OF_MINER_IP_HERE"
+# MY_IP will be a single string in the form of "127.0.0.1:5000"
+# LIST_OF_MINER_IP will be a list of strings in the form of ["127.0.0.1:5000","127.0.0.1:5001","127.0.0.1:5002"]
 
 class Miner:
 
