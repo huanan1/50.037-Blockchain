@@ -65,19 +65,23 @@ def start_mining(block_queue):
         if miner_status:
             # todo Broadcast to network
             print(miner.blockchain)
-            pass
-        if not block_queue.empty():
-            new_block = block_queue.get()
-            miner.new_block(new_block)
-            print(miner.blockchain)
+        # Checks value of nonce, as checking queue every cycle makes it very laggy
+        if miner.nonce % 100000 == 0:
+            if not block_queue.empty():
+                new_block = block_queue.get()
+                miner.new_block(new_block)
+                print(miner.blockchain)
+                print("activate")
 
 block_queue = Queue()
 
 @app.route('/block')
 def new_block_network():
+    # Needs to add a proper block object, currently thing will fail
     block_queue.put("a")
 
 if __name__ == '__main__':
+    print("ok")
     p = Process(target=start_mining, args=(block_queue,))
     p.start()
     app.run(debug=True, use_reloader=False, port=MY_PORT)
