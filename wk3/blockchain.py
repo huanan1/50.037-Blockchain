@@ -77,11 +77,6 @@ class BlockChain:
         self.cleaned_keys = self.resolve_DP(
             genesis_hash_value, 0, [genesis_hash_value])[1]
         self.last_hash = self.cleaned_keys[-1]
-        # Recreates chain based on output of DP function
-        for i in self.chain:
-            if i in self.cleaned_keys:
-                cleaned_chain[i] = self.chain[i]
-        self.chain = copy.deepcopy(cleaned_chain)
 
     def resolve_DP(self, hash_check, score, cleared_hashes):
         # Assuming this is the last block in the chain, it first saves itself to the list
@@ -125,8 +120,7 @@ class BlockChain:
         # Length of TARGET byte object
         TARGET_length = 16
         # Because we are basing on cleaned_keys list, we need to make sure chain and cleaned_list are the same
-        if len(self.chain) != len(self.cleaned_keys):
-            self.resolve()
+        self.resolve()
         no_of_blocks = len(self.cleaned_keys)
         # Every X number of blocks, run difficulty check
         if no_of_blocks % self.difficulty_interval == 0 and no_of_blocks > 0:
