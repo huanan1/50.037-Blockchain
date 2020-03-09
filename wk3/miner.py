@@ -42,7 +42,7 @@ class Miner:
         self.blockchain.difficulty_adjust()
 
     def new_block(self, block):
-        self.blockchain.chain.add(block)
+        self.blockchain.add(block)
         self.reset_new_mine()
         
 
@@ -54,35 +54,64 @@ def create_sample_merkle():
     merkletree.build()
     return merkletree
 
-def start_mining(block_queue):
+def create_merkle(transaction_queue):
+    list_of_raw_transactions = []
+    list_of_validated_transactions = []
+    while not transaction_queue.empty():
+        list_of_raw_transactions.append(Transaction.from_json(transaction_queue.get()))
+    for transaction in list_of_raw_transactions:
+        # TODO: check if transaction is okay
+        if True:
+            list_of_validated_transactions.append(transaction)
+
+    merkletree = MerkleTree()
+    # TODO: Add coinbase TX
+    merkletree.add(COINBASE_TRANSACTION)
+    for transaction in list_of_validated_transactions:
+        merkletree.add(transaction.to_json())
+    merkletree.build()
+    return merkletree
+
+def start_mining(block_queue, transaction_queue):
     merkletree = create_sample_merkle()
     blockchain = BlockChain()
     miner = Miner(blockchain)
     miner_status = False
     while True:
-        miner_status = miner.mine(merkletree)
-        # Right now, each miner copies the entire chain from another miner... maybe do block?
-        if miner_status:
-            # todo Broadcast to network
-            print(miner.blockchain)
-        # Checks value of nonce, as checking queue every cycle makes it very laggy
-        if miner.nonce % 100000 == 0:
-            if not block_queue.empty():
-                new_block = block_queue.get()
-                miner.new_block(new_block)
-                print(miner.blockchain)
-                print("activate")
+        while True:
+            miner_status = miner.mine(merkletree)
+            if miner_status:
+                # TODO: Broadcast to network
+                break
+            # Checks value of nonce, as checking queue every cycle makes it very laggy
+            if miner.nonce % 500000 == 0:
+                print(miner.nonce)
+                if not block_queue.empty():
+                    new_block = block_queue.get()
+                    miner.new_block(new_block)
+                    print(miner.blockchain)
+                    print("activate")
+                    break
+        # Section run if the miner found a block or receives a block that has been broadcasted
+        print(miner.blockchain)
+        # merkletree = create_merkle(transaction_queue)
 
 block_queue = Queue()
+transaction_queue = Queue()
 
 @app.route('/block')
 def new_block_network():
     # Needs to add a proper block object, currently thing will fail
     block_queue.put("a")
 
+@app.route('/transaction')
+def new_transaction_network():
+    # Needs to add a proper block object, currently thing will fail
+    transaction_queue.put("a")
+
 if __name__ == '__main__':
     print("ok")
-    p = Process(target=start_mining, args=(block_queue,))
+    p = Process(target=start_mining, args=(block_queue,transaction_queue,))
     p.start()
     app.run(debug=True, use_reloader=False, port=MY_PORT)
     p.join()
