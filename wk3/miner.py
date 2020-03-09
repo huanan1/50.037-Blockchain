@@ -26,21 +26,25 @@ class Miner:
                       merkletree.get_root(), self.current_time, self.nonce)
         if self.blockchain.add(block):
             # If the add is successful, reset
-            self.new_block(self.blockchain.chain)
+            self.reset_new_mine()
             print(MY_IP)
             return True
         self.nonce += 1
         # print(block.header_hash())
         return False
 
-    def new_block(self, chain):
+    def reset_new_mine(self):
         self.nonce = 0
         self.current_time = str(time.time())
-        self.blockchain.chain = copy.deepcopy(chain)
         self.blockchain.resolve()
         # need to include proper checks when new block is added
         # check should be in here or resolve?
         self.blockchain.difficulty_adjust()
+
+    def new_block(self, block):
+        self.blockchain.chain.add(block)
+        self.reset_new_mine()
+        
 
 # Random Merkletree
 def create_sample_merkle():
@@ -50,54 +54,31 @@ def create_sample_merkle():
     merkletree.build()
     return merkletree
 
-def start_mining(queue):
+def start_mining(block_queue):
     merkletree = create_sample_merkle()
     blockchain = BlockChain()
     miner = Miner(blockchain)
+    miner_status = False
+    while True:
+        miner_status = miner.mine(merkletree)
+        # Right now, each miner copies the entire chain from another miner... maybe do block?
+        if miner_status:
+            # todo Broadcast to network
+            print(miner.blockchain)
+            pass
+        if not block_queue.empty():
+            new_block = block_queue.get()
+            miner.new_block(new_block)
+            print(miner.blockchain)
 
-    while queue.empty():
-        miner_status = False
-        while not miner_status:
-            miner_status = miner.mine(merkletree)
-            # Right now, each miner copies the entire chain from another miner... maybe do block?
-            if miner_status:
-                pass
-                # todo Broadcast to network
-        print(miner.blockchain)
+block_queue = Queue()
 
-    print("DONE")
-
-queue = Queue()
-
-@app.route('/')
-def hello_world():
-    queue.put("a")
-    return 'Hello, World!'
+@app.route('/block')
+def new_block_network():
+    block_queue.put("a")
 
 if __name__ == '__main__':
-    p = Process(target=start_mining, args=(queue,))
+    p = Process(target=start_mining, args=(block_queue,))
     p.start()
     app.run(debug=True, use_reloader=False, port=MY_PORT)
     p.join()
-
-# merkletree = create_sample_merkle()
-# blockchain = BlockChain()
-# miner1, miner2, miner3 = Miner(blockchain), Miner(
-#     blockchain), Miner(blockchain)
-# while True:
-#     miner1_status, miner2_status, miner3_status = False, False, False
-#     while not (miner1_status or miner2_status or miner3_status):
-#         miner1_status = miner1.mine(merkletree)
-#         miner2_status = miner2.mine(merkletree)
-#         miner3_status = miner3.mine(merkletree)
-#         # Right now, each miner copies the entire chain from another miner... maybe do block?
-#         if miner1_status:
-#             miner2.new_block(miner1.blockchain.chain)
-#             miner3.new_block(miner1.blockchain.chain)
-#         elif miner2_status:
-#             miner1.new_block(miner2.blockchain.chain)
-#             miner3.new_block(miner2.blockchain.chain)
-#         elif miner3_status:
-#             miner1.new_block(miner3.blockchain.chain)
-#             miner2.new_block(miner3.blockchain.chain)
-#     print(miner1.blockchain)
