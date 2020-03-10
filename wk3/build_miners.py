@@ -12,6 +12,8 @@ for line in f:
         "127.0.0.1:" + line)
 f.close()
 
+colors = ['r','g','y','b','m']
+
 for count, i in enumerate(list_of_miner_ports):
     list_of_partner_miners = copy.deepcopy(list_of_miner_ips)
     del list_of_partner_miners[count]
@@ -19,6 +21,7 @@ for count, i in enumerate(list_of_miner_ports):
     f.writelines(list_of_partner_miners)
     print(i, list_of_partner_miners)
     f.close()
-    os.system("python3 miner.py -p {} -i partner_miner_ip.txt &".format(i))
-    time.sleep(1.5)
+    print(colors[count//len(colors)])
+    os.system("python3 miner.py -p {0} -i partner_miner_ip.txt -c {1} &".format(i, colors[count%len(colors)]))
+    time.sleep(3)
     os.system('rm partner_miner_ip.txt')

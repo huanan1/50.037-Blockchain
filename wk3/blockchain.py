@@ -66,15 +66,16 @@ class BlockChain:
             return block.header_hash() < self.TARGET
 
     def resolve(self):
-        for hash_value in self.chain:
-            if self.chain[hash_value].previous_header_hash == None:
-                # Find the genesis block's hash value
-                genesis_hash_value = hash_value
-                break
-        # Start DP function
-        self.cleaned_keys = self.resolve_DP(
-            genesis_hash_value, 0, [genesis_hash_value])[1]
-        self.last_hash = self.cleaned_keys[-1]
+        if len(self.chain) > 0:
+            for hash_value in self.chain:
+                if self.chain[hash_value].previous_header_hash == None:
+                    # Find the genesis block's hash value
+                    genesis_hash_value = hash_value
+                    break
+            # Start DP function
+            self.cleaned_keys = self.resolve_DP(
+                genesis_hash_value, 0, [genesis_hash_value])[1]
+            self.last_hash = self.cleaned_keys[-1]
 
     def resolve_DP(self, hash_check, score, cleared_hashes):
         # Assuming this is the last block in the chain, it first saves itself to the list
