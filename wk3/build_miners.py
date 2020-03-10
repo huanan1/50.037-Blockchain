@@ -12,7 +12,7 @@ for line in f:
         "127.0.0.1:" + line)
 f.close()
 
-colors = ['r','g','y','b','m']
+colors = ['w','r','g','y','b','m','c']
 
 for count, i in enumerate(list_of_miner_ports):
     list_of_partner_miners = copy.deepcopy(list_of_miner_ips)
