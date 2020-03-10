@@ -71,8 +71,6 @@ class BlockChain:
                 # Find the genesis block's hash value
                 genesis_hash_value = hash_value
                 break
-        # Create a new chain
-        cleaned_chain = dict()
         # Start DP function
         self.cleaned_keys = self.resolve_DP(
             genesis_hash_value, 0, [genesis_hash_value])[1]
