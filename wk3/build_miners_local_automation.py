@@ -1,8 +1,33 @@
 import os
 import copy
 import time
+import sys
+import getopt
 
 # This file is only for local testing, if using multiple comps, don't use
+
+# Parsing arguments when entered via CLI
+def parse_arguments(argv):
+    selfish = False
+    mode = 1
+    try:
+        opts, args = getopt.getopt(
+            argv, "hs:", ["selfish="])
+    # Only port and input is mandatory
+    except getopt.GetoptError:
+        print('build_miners_local_automation.py -s <1 if one selfish miner>')
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            print('build_miners_local_automation.py -s <1 if one selfish miner>')
+            sys.exit()
+        elif opt in ("-s", "--selfish"):
+            if arg=="1":
+                selfish = True
+    return selfish
+# deploys single selfish miner if true
+SELFISH = parse_arguments(sys.argv[1:])
+
 # Reads LOCAL ports to use via miner_ports.txt
 f = open("miner_ports.txt", "r")
 list_of_miner_ports = []
@@ -23,7 +48,13 @@ for count, i in enumerate(list_of_miner_ports):
     f.writelines(list_of_partner_miners)
     f.close()
     # Reads file
-    os.system("python3 miner.py -p {0} -i partner_miner_ip.txt -c {1} -m 2&".format(i, colors[count%len(colors)]))
+    if not SELFISH:
+        os.system("python3 miner.py -p {0} -i partner_miner_ip.txt -c {1} -m 2&".format(i, colors[count%len(colors)]))
+    else:
+        if count == 0:
+            os.system("python3 miner.py -p {0} -i partner_miner_ip.txt -c {1} -m 2 -s 1&".format(i, colors[count%len(colors)]))
+        else:
+            os.system("python3 miner.py -p {0} -i partner_miner_ip.txt -c {1} -m 2&".format(i, colors[count%len(colors)]))
     time.sleep(2)
     # Removes file for cleanup
     os.system('rm partner_miner_ip.txt')
