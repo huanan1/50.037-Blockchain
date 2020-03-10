@@ -82,9 +82,9 @@ class Miner:
         # check should be in here or resolve?
         # self.blockchain.difficulty_adjust()
 
-    def new_block(self, block):
-        print("new_block", self.blockchain.add(block))
-        self.reset_new_mine()
+    def network_block(self, block):
+        if self.blockchain.network_add(block):
+            self.reset_new_mine()
 
 
 # Random Merkletree
@@ -129,20 +129,22 @@ def start_mining(block_queue, transaction_queue):
                 data = pickle.dumps(sending_block, protocol=2)
                 for miner_ip in LIST_OF_MINER_IP:
                     send_failed = True
+                    
                     while send_failed:
                         try:
-                            r = requests.post("http://"+miner_ip+"/block", data=data)
+                            requests.post("http://"+miner_ip+"/block", data=data)
                             send_failed = False
+                            
                         except:
-                            pass
+                            time.sleep(0.1)
                     # print(r.json())
                 break
             # Checks value of nonce, as checking queue every cycle makes it very laggy
-            if miner.nonce % 100000 == 0:
+            if miner.nonce % 10000 == 0:
                 if not block_queue.empty():
                     new_block = block_queue.get()
                     print(new_block)
-                    miner.new_block(new_block)
+                    miner.network_block(new_block)
                     print("activate")
                     break
         # Section run if the miner found a block or receives a block that has been broadcasted
