@@ -8,12 +8,36 @@ from flask import Flask, request
 from multiprocessing import Process, Queue
 import pickle
 import requests
+import sys
+import getopt
 
 app = Flask(__name__)
 
-MY_IP = "$MY_IP_HERE"
-MY_PORT = MY_IP.split(":")[1]
-LIST_OF_MINER_IP = "$LIST_OF_MINER_IP_HERE"
+
+def parse_arguments(argv):
+    inputfile = ''
+    outputfile = ''
+    list_of_miner_ip=[]
+    try:
+        opts, args = getopt.getopt(argv, "hp:i:", ["port=", "ifile="])
+    except getopt.GetoptError:
+        print ('test.py -i <inputfile> -o <outputfile>')
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            print ('test.py -i <inputfile> -o <outputfile>')
+            sys.exit()
+        elif opt in ("-p", "--port"):
+            my_port = arg
+        elif opt in ("-i", "--ifile"):
+            inputfile = arg
+            f = open(inputfile, "r")
+            for line in f:
+                list_of_miner_ip.append(line)
+            print(list_of_miner_ip)
+    return my_port, list_of_miner_ip
+
+MY_PORT, LIST_OF_MINER_IP = parse_arguments(sys.argv[1:])
 # MY_IP will be a single string in the form of "127.0.0.1:5000"
 # LIST_OF_MINER_IP will be a list of strings in the form of ["127.0.0.1:5000","127.0.0.1:5001","127.0.0.1:5002"]
 
@@ -30,7 +54,7 @@ class Miner:
         if self.blockchain.add(block):
             # If the add is successful, reset
             self.reset_new_mine()
-            print(MY_IP)
+            # print(MY_IP)
             return True
         self.nonce += 1
         # print(block.header_hash())
@@ -125,7 +149,6 @@ def new_transaction_network():
 
 
 if __name__ == '__main__':
-    print("ok")
     p = Process(target=start_mining, args=(block_queue, transaction_queue,))
     p.start()
     app.run(debug=True, use_reloader=False, port=MY_PORT)
