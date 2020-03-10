@@ -14,20 +14,21 @@ import colorama
 
 app = Flask(__name__)
 
-
+# Parsing arguments when 
 def parse_arguments(argv):
     inputfile = ''
     outputfile = ''
     color = ''
     list_of_miner_ip=[]
     try:
-        opts, args = getopt.getopt(argv, "hp:i:c:", ["port=", "ifile=","color="])
+        opts, args = getopt.getopt(argv, "hp:i:c:m:", ["port=", "ifile=","color=","mode="])
     except getopt.GetoptError:
-        print ('test.py -i <inputfile> -o <outputfile>')
+        print ('test.py -p<port> -i <inputfile of list of IPs of other miners> -c <color w|r|h|y|m|c> -m <mode 1/2>')
         sys.exit(2)
     for opt, arg in opts:
+        mode = 1
         if opt == '-h':
-            print ('test.py -i <inputfile> -o <outputfile>')
+            print ('test.py -p<port> -i <inputfile of list of IPs of other miners> -c <color w|r|h|y|m|c> -m <mode 1/2>')
             sys.exit()
         elif opt in ("-p", "--port"):
             my_port = arg
@@ -53,9 +54,15 @@ def parse_arguments(argv):
                 color = colorama.Fore.MAGENTA
             elif color_arg == "c":
                 color = colorama.Fore.CYAN
-    return my_port, list_of_miner_ip, color
+        elif opt in ("-m", "--mode"):
+            mode_arg = arg
+            if mode_arg == "2":
+                mode = 2
+            else:
+                mode = 1
+    return my_port, list_of_miner_ip, color, mode
 
-MY_PORT, LIST_OF_MINER_IP, COLOR = parse_arguments(sys.argv[1:])
+MY_PORT, LIST_OF_MINER_IP, COLOR, MODE = parse_arguments(sys.argv[1:])
 # MY_IP will be a single string in the form of "127.0.0.1:5000"
 # LIST_OF_MINER_IP will be a list of strings in the form of ["127.0.0.1:5000","127.0.0.1:5001","127.0.0.1:5002"]
 
@@ -133,44 +140,36 @@ def start_mining(block_queue, transaction_queue):
                 data = pickle.dumps(sending_block, protocol=2)
                 for miner_ip in LIST_OF_MINER_IP:
                     send_failed = True
-                    
                     while send_failed:
                         try:
                             requests.post("http://"+miner_ip+"/block", data=data)
                             send_failed = False
-                            
                         except:
                             time.sleep(0.1)
-                    # print(r.json())
                 break
             # Checks value of nonce, as checking queue every cycle makes it very laggy
             if miner.nonce % 10000 == 0:
                 if not block_queue.empty():
                     new_block = block_queue.get()
-                    print(new_block)
                     miner.network_block(new_block)
-                    print("activate")
                     break
         # Section run if the miner found a block or receives a block that has been broadcasted
-        print(COLOR + str(miner.blockchain))
+        print(COLOR + (str(miner.blockchain) if MODE==1 else str(miner.blockchain).split("~~~")[1]))
         # merkletree = create_merkle(transaction_queue)
-
 
 block_queue = Queue()
 transaction_queue = Queue()
 
-
 @app.route('/block', methods=['POST'])
 def new_block_network():
-    # Needs to add a proper block object, currently thing will fail
     new_block = pickle.loads(request.get_data())
     block_queue.put(new_block)
-    return "yes"
+    return ""
 
 
 @app.route('/transaction')
 def new_transaction_network():
-    # Needs to add a proper block object, currently thing will fail
+    # Needs to add a proper transaction object, currently thing will fail
     transaction_queue.put("a")
 
 

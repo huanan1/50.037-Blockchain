@@ -120,7 +120,8 @@ class BlockChain:
         for count, i in enumerate(self.chain):
             reply += "Header: {}\tPrev_header: {}\n".format(
                 str(i), str(self.chain[i].previous_header_hash))
-        reply += "\nThe longest chain is {} blocks\n".format(
+        reply+="\n~~~\n"
+        reply += "The longest chain is {} blocks\n".format(
             len(self.cleaned_keys))
         for count, i in enumerate(self.cleaned_keys):
             reply += i[:10] + " -> "
