@@ -12,27 +12,26 @@ import colorama
 from flask import Flask, request
 from multiprocessing import Process, Queue
 
-
 app = Flask(__name__)
 
 # Parsing arguments when entered via CLI
-# miner.py -p <port> -i <inputfile of list of IPs of other miners> -c <color w|r|h|y|m|c> -m <mode 1/2>
 def parse_arguments(argv):
     inputfile = ''
     outputfile = ''
     color = ''
+    selfish = False
     list_of_miner_ip = []
+    mode = 1
     try:
         opts, args = getopt.getopt(
-            argv, "hp:i:c:m:", ["port=", "ifile=", "color=", "mode="])
+            argv, "hp:i:c:m:s:", ["port=", "ifile=", "color=", "mode=","selfish="])
     # Only port and input is mandatory
     except getopt.GetoptError:
-        print('miner.py -p <port> -i <inputfile of list of IPs of other miners> -c <color w|r|h|y|m|c> -m <mode 1/2>')
+        print('miner.py -p <port> -i <inputfile of list of IPs of other miners> -c <color w|r|h|y|m|c> -m <mode 1/2> -s <1 if selfish miner>')
         sys.exit(2)
     for opt, arg in opts:
-        mode = 1
         if opt == '-h':
-            print('miner.py -p <port> -i <inputfile of list of IPs of other miners> -c <color w|r|h|y|m|c> -m <mode 1/2>')
+            print('miner.py -p <port> -i <inputfile of list of IPs of other miners> -c <color w|r|h|y|m|c> -m <mode 1/2> -s <1 if selfish miner>')
             sys.exit()
         elif opt in ("-p", "--port"):
             my_port = arg
@@ -41,7 +40,6 @@ def parse_arguments(argv):
             f = open(inputfile, "r")
             for line in f:
                 list_of_miner_ip.append(line)
-            print(list_of_miner_ip)
         elif opt in ("-c", "--color"):
             color_arg = arg
             if color_arg == "w":
@@ -62,17 +60,19 @@ def parse_arguments(argv):
             mode_arg = arg
             if mode_arg == "2":
                 mode = 2
-            else:
-                mode = 1
-    return my_port, list_of_miner_ip, color, mode
+        elif opt in ("-s", "--selfish"):
+            if arg=="1":
+                selfish = True
+    return my_port, list_of_miner_ip, color, mode, selfish
 
 
 # Get data from arguments
-MY_PORT, LIST_OF_MINER_IP, COLOR, MODE = parse_arguments(sys.argv[1:])
+MY_PORT, LIST_OF_MINER_IP, COLOR, MODE, SELFISH = parse_arguments(sys.argv[1:])
 # MY_IP will be a single string in the form of "127.0.0.1:5000"
 # LIST_OF_MINER_IP will be a list of strings in the form of ["127.0.0.1:5000","127.0.0.1:5001","127.0.0.1:5002"]
 # COLOR is color of text using colorama library
 # MODE is either 1 or 2, 1 is full details, 2 is shortform
+# SELFISH if True, this miner will be a selfish miner
 
 
 class Miner:
@@ -149,12 +149,12 @@ def create_merkle(transaction_queue):
     merkletree.build()
     return merkletree
 
-
+blockchain = BlockChain()
 def start_mining(block_queue, transaction_queue):
     merkletree = create_sample_merkle()
-    blockchain = BlockChain()
     miner = Miner(blockchain)
     miner_status = False
+    list_of_blocks_selfish = []
     # Infinite loop
     while True:
         while True:
@@ -163,20 +163,42 @@ def start_mining(block_queue, transaction_queue):
             mine_or_recv = ""
             # Check if that mine is successful
             if miner_status:
+                mine_or_recv = "Block MINED\n"
                 sending_block = blockchain.last_block()
                 # Grab the last block and send to network
-                data = pickle.dumps(sending_block, protocol=2)
-                for miner_ip in LIST_OF_MINER_IP:
-                    send_failed = True
-                    mine_or_recv = "Block MINED\n"
-                    # Retry until peer receives, idk i think prof say ok right? assume all in stable network lel
-                    while send_failed:
-                        try:
-                            requests.post("http://"+miner_ip +
-                                          "/block", data=data)
-                            send_failed = False
-                        except:
-                            time.sleep(0.1)
+                # regular miner
+                if not SELFISH:
+                    data = pickle.dumps(sending_block, protocol=2)
+                    for miner_ip in LIST_OF_MINER_IP:
+                        send_failed = True
+                        # Retry until peer receives, idk i think prof say ok right? assume all in stable network lel
+                        while send_failed:
+                            try:
+                                requests.post("http://"+miner_ip +
+                                            "/block", data=data)
+                                send_failed = False
+                            except:
+                                time.sleep(0.1)
+                # If selfish miner
+                else:
+                    mine_or_recv+="SELFISH MINING\n"
+                    list_of_blocks_selfish.append(sending_block)
+                    # It will send only every 2 blocks
+                    if len(list_of_blocks_selfish) >=2:
+                        mine_or_recv+="SENDING SELFISH BLOCKS\n"
+                        for block in list_of_blocks_selfish:
+                            data = pickle.dumps(block, protocol=2)
+                            for miner_ip in LIST_OF_MINER_IP:
+                                send_failed = True
+                                # Retry until peer receives, idk i think prof say ok right? assume all in stable network lel
+                                while send_failed:
+                                    try:
+                                        requests.post("http://"+miner_ip +
+                                                    "/block", data=data)
+                                        send_failed = False
+                                    except:
+                                        time.sleep(0.1)
+                        list_of_blocks_selfish=[]
                 break
             # Checks value of nonce, as checking queue every cycle makes it very laggy
             if miner.nonce % 10000 == 0:
@@ -196,6 +218,7 @@ def start_mining(block_queue, transaction_queue):
 # Queue objects for passing stuff between processes
 block_queue = Queue()
 transaction_queue = Queue()
+transaction_queue = Queue()
 
 @app.route('/block', methods=['POST'])
 def new_block_network():
@@ -210,6 +233,11 @@ def new_transaction_network():
     # TODO add rebroadcast of signal??
     transaction_queue.put("a")
 
+@app.route('/request_blockchain')
+def request_blockchain():
+    # Needs to add a proper transaction object, currently thing will fail
+    # TODO add rebroadcast of signal??
+    transaction_queue.put("a")
 
 if __name__ == '__main__':
     p = Process(target=start_mining, args=(block_queue, transaction_queue,))

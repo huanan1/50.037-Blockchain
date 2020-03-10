@@ -49,6 +49,11 @@ class BlockChain:
     def network_add(self, block):
         # Checks if block received by networks is valid before adding
         # TODO So right, this one needs to have a caching thing? idk now it just accepts all blocks HUAN AN SOLVE THANKS
+
+        # Idea why not no caching, just check all blocks? Like what if we move the checks to the resolve function?
+        # Like, what if network add doesn't really care if a TX is valid, only when validate is called, then it checks EVERYTHING, may be ineffecient
+        # But it gets us the points?
+
         # Validation should be here ah coz this is for all 'network' blocks
         # the add and validate functions are for local blocks, so i just assume all is correct alr
         # What should this check?
@@ -58,7 +63,7 @@ class BlockChain:
         # 2. You also need to check TXID is not duplicated for any blocks before this one, rmb if its
         #    after this block, aka tthis is a fork, it CAN be duplicated
         #
-        # After all these verifications,  
+        # After all these verifications,  51% attack and selfish mining should be okay
         # The list of headers in order is cleaned_keys btw, if its not working as intended, just call resolve
         if True:
             self.chain[binascii.hexlify(block.header_hash()).decode()] = block
