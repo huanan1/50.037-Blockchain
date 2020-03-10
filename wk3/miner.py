@@ -39,7 +39,9 @@ def parse_arguments(argv):
             print(list_of_miner_ip)
         elif opt in ("-c", "--color"):
             color_arg = arg
-            if color_arg == "r":
+            if color_arg == "w":
+                color = colorama.Fore.WHITE
+            elif color_arg == "r":
                 color = colorama.Fore.RED
             elif color_arg == "g":
                 color = colorama.Fore.GREEN
@@ -49,6 +51,8 @@ def parse_arguments(argv):
                 color = colorama.Fore.BLUE
             elif color_arg == "m":
                 color = colorama.Fore.MAGENTA
+            elif color_arg == "c":
+                color = colorama.Fore.CYAN
     return my_port, list_of_miner_ip, color
 
 MY_PORT, LIST_OF_MINER_IP, COLOR = parse_arguments(sys.argv[1:])

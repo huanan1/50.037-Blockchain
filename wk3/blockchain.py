@@ -47,7 +47,10 @@ class BlockChain:
     difficulty_multiplier = 1
 
     def network_add(self, block):
-        # Checks if block is valid before adding
+        # Checks if block received by networks is valid before adding
+        # TODO So right, this one needs to have a caching thing? idk now it just accepts all blocks HUAN AN SOLVE THANKS
+        # Validation should be here ah coz this is for all 'network' blocks
+        # the add and validate functions are for local blocks, so i just assume all is correct alr
         if True:
             self.chain[binascii.hexlify(block.header_hash()).decode()] = block
             return True
