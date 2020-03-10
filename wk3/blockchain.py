@@ -51,6 +51,15 @@ class BlockChain:
         # TODO So right, this one needs to have a caching thing? idk now it just accepts all blocks HUAN AN SOLVE THANKS
         # Validation should be here ah coz this is for all 'network' blocks
         # the add and validate functions are for local blocks, so i just assume all is correct alr
+        # What should this check?
+        # 1. All transactions are valid, so, idk need to work this out with Youngmin ASAP, but like
+        #    assuming all the blocks have their own ledger, you need to double check the prev_header_hash
+        #    and check that ledger to see if the account has enough money
+        # 2. You also need to check TXID is not duplicated for any blocks before this one, rmb if its
+        #    after this block, aka tthis is a fork, it CAN be duplicated
+        #
+        # After all these verifications,  
+        # The list of headers in order is cleaned_keys btw, if its not working as intended, just call resolve
         if True:
             self.chain[binascii.hexlify(block.header_hash()).decode()] = block
             return True
@@ -114,6 +123,14 @@ class BlockChain:
             if i[0] == highest_score:
                 return i
 
+    # Returns the last block in the chain
+    def last_block(self):
+        self.resolve()
+        if self.last_hash is not None:
+            return self.chain[self.last_hash]
+        else:
+            return None
+
     def __str__(self):
         reply = "-----------------\nThere are {} blocks in the blockchain\n\n".format(
             len(self.chain))
@@ -128,12 +145,7 @@ class BlockChain:
         reply = reply[:-4]
         return reply
 
-    def last_block(self):
-        self.resolve()
-        if self.last_hash is not None:
-            return self.chain[self.last_hash]
-        else:
-            return None
+    # REMOVED DIFFICULTY as cannot sync across miners
 
     # def difficulty_adjust(self):
     #     # Length of TARGET byte object
