@@ -106,36 +106,38 @@ class BlockChain:
                 reply += "Genesis Block \t"
             else:
                 reply += "Block {} \t".format(str(count).zfill(5))
-            reply += "\tHeader: {}\tPrev_header: {}\n".format(
+            reply += "\tHeader: {}\tPrev_header: {}\n\n".format(
                 str(i), str(self.chain[i].previous_header_hash))
+        reply += str(self.cleaned_keys)
         return reply
 
     def last_block(self):
-        if not None:
-            return self.chain[self.last]
+        self.resolve()
+        if self.last_hash is not None:
+            return self.chain[self.last_hash]
         else:
             return None
 
-    def difficulty_adjust(self):
-        # Length of TARGET byte object
-        TARGET_length = 16
-        # Because we are basing on cleaned_keys list, we need to make sure chain and cleaned_list are the same
-        self.resolve()
-        no_of_blocks = len(self.cleaned_keys)
-        # Every X number of blocks, run difficulty check
-        if no_of_blocks % self.difficulty_interval == 0 and no_of_blocks > 0:
-            if no_of_blocks >= self.difficulty_interval:
-                # Get average time difference across X number of blocks
-                time_diff = float(self.chain[self.cleaned_keys[-1]].timestamp) - \
-                    float(self.chain[self.cleaned_keys[-5]].timestamp)
-                average_time = time_diff/self.difficulty_interval
-                # Change target depending on how the time average
-                TARGET_int = int.from_bytes(self.TARGET, 'big')
-                TARGET_int += int((self.target_average_time -
-                                   average_time) * self.difficulty_multiplier)
-                # todo limits and max/min
-                self.TARGET = TARGET_int.to_bytes(16, 'big')
-                print("Target adjusted:" + str(self.TARGET))
+    # def difficulty_adjust(self):
+    #     # Length of TARGET byte object
+    #     TARGET_length = 16
+    #     # Because we are basing on cleaned_keys list, we need to make sure chain and cleaned_list are the same
+    #     self.resolve()
+    #     no_of_blocks = len(self.cleaned_keys)
+    #     # Every X number of blocks, run difficulty check
+    #     if no_of_blocks % self.difficulty_interval == 0 and no_of_blocks > 0:
+    #         if no_of_blocks >= self.difficulty_interval:
+    #             # Get average time difference across X number of blocks
+    #             time_diff = float(self.chain[self.cleaned_keys[-1]].timestamp) - \
+    #                 float(self.chain[self.cleaned_keys[-5]].timestamp)
+    #             average_time = time_diff/self.difficulty_interval
+    #             # Change target depending on how the time average
+    #             TARGET_int = int.from_bytes(self.TARGET, 'big')
+    #             TARGET_int += int((self.target_average_time -
+    #                                average_time) * self.difficulty_multiplier)
+    #             # todo limits and max/min
+    #             self.TARGET = TARGET_int.to_bytes(16, 'big')
+    #             print("Target adjusted:" + str(self.TARGET))
 
 
 # Test

@@ -4,8 +4,10 @@ from merkle_tree import MerkleTree
 import random
 import time
 import copy
-from flask import Flask
+from flask import Flask, request
 from multiprocessing import Process, Queue
+import pickle
+import requests
 
 app = Flask(__name__)
 
@@ -14,6 +16,7 @@ MY_PORT = MY_IP.split(":")[1]
 LIST_OF_MINER_IP = "$LIST_OF_MINER_IP_HERE"
 # MY_IP will be a single string in the form of "127.0.0.1:5000"
 # LIST_OF_MINER_IP will be a list of strings in the form of ["127.0.0.1:5000","127.0.0.1:5001","127.0.0.1:5002"]
+
 
 class Miner:
     def __init__(self, blockchain):
@@ -39,12 +42,12 @@ class Miner:
         self.blockchain.resolve()
         # need to include proper checks when new block is added
         # check should be in here or resolve?
-        self.blockchain.difficulty_adjust()
+        # self.blockchain.difficulty_adjust()
 
     def new_block(self, block):
-        self.blockchain.add(block)
+        print("new_block", self.blockchain.add(block))
         self.reset_new_mine()
-        
+
 
 # Random Merkletree
 def create_sample_merkle():
@@ -54,11 +57,13 @@ def create_sample_merkle():
     merkletree.build()
     return merkletree
 
+
 def create_merkle(transaction_queue):
     list_of_raw_transactions = []
     list_of_validated_transactions = []
     while not transaction_queue.empty():
-        list_of_raw_transactions.append(Transaction.from_json(transaction_queue.get()))
+        list_of_raw_transactions.append(
+            Transaction.from_json(transaction_queue.get()))
     for transaction in list_of_raw_transactions:
         # TODO: check if transaction is okay
         if True:
@@ -66,11 +71,12 @@ def create_merkle(transaction_queue):
 
     merkletree = MerkleTree()
     # TODO: Add coinbase TX
-    merkletree.add(COINBASE_TRANSACTION)
+    # merkletree.add(COINBASE_TRANSACTION)
     for transaction in list_of_validated_transactions:
         merkletree.add(transaction.to_json())
     merkletree.build()
     return merkletree
+
 
 def start_mining(block_queue, transaction_queue):
     merkletree = create_sample_merkle()
@@ -81,37 +87,46 @@ def start_mining(block_queue, transaction_queue):
         while True:
             miner_status = miner.mine(merkletree)
             if miner_status:
-                # TODO: Broadcast to network
+                sending_block = blockchain.last_block()
+                data = pickle.dumps(sending_block, protocol=2)
+                for miner_ip in LIST_OF_MINER_IP:
+                    r = requests.post("http://"+miner_ip+"/block", data=data)
+                    # print(r.json())
                 break
             # Checks value of nonce, as checking queue every cycle makes it very laggy
-            if miner.nonce % 500000 == 0:
-                print(miner.nonce)
+            if miner.nonce % 100000 == 0:
                 if not block_queue.empty():
                     new_block = block_queue.get()
+                    print(new_block)
                     miner.new_block(new_block)
-                    print(miner.blockchain)
                     print("activate")
                     break
         # Section run if the miner found a block or receives a block that has been broadcasted
         print(miner.blockchain)
         # merkletree = create_merkle(transaction_queue)
 
+
 block_queue = Queue()
 transaction_queue = Queue()
 
-@app.route('/block')
+
+@app.route('/block', methods=['POST'])
 def new_block_network():
     # Needs to add a proper block object, currently thing will fail
-    block_queue.put("a")
+    new_block = pickle.loads(request.get_data())
+    block_queue.put(new_block)
+    return "yes"
+
 
 @app.route('/transaction')
 def new_transaction_network():
     # Needs to add a proper block object, currently thing will fail
     transaction_queue.put("a")
 
+
 if __name__ == '__main__':
     print("ok")
-    p = Process(target=start_mining, args=(block_queue,transaction_queue,))
+    p = Process(target=start_mining, args=(block_queue, transaction_queue,))
     p.start()
     app.run(debug=True, use_reloader=False, port=MY_PORT)
     p.join()
