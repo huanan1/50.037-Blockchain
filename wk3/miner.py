@@ -18,9 +18,10 @@ app = Flask(__name__)
 def parse_arguments(argv):
     inputfile = ''
     outputfile = ''
+    color = ''
     list_of_miner_ip=[]
     try:
-        opts, args = getopt.getopt(argv, "hp:i:", ["port=", "ifile="])
+        opts, args = getopt.getopt(argv, "hp:i:c:", ["port=", "ifile=","color="])
     except getopt.GetoptError:
         print ('test.py -i <inputfile> -o <outputfile>')
         sys.exit(2)
@@ -36,9 +37,21 @@ def parse_arguments(argv):
             for line in f:
                 list_of_miner_ip.append(line)
             print(list_of_miner_ip)
-    return my_port, list_of_miner_ip
+        elif opt in ("-c", "--color"):
+            color_arg = arg
+            if color_arg == "r":
+                color = colorama.Fore.RED
+            elif color_arg == "g":
+                color = colorama.Fore.GREEN
+            elif color_arg == "y":
+                color = colorama.Fore.YELLOW
+            elif color_arg == "b":
+                color = colorama.Fore.BLUE
+            elif color_arg == "m":
+                color = colorama.Fore.MAGENTA
+    return my_port, list_of_miner_ip, color
 
-MY_PORT, LIST_OF_MINER_IP = parse_arguments(sys.argv[1:])
+MY_PORT, LIST_OF_MINER_IP, COLOR = parse_arguments(sys.argv[1:])
 # MY_IP will be a single string in the form of "127.0.0.1:5000"
 # LIST_OF_MINER_IP will be a list of strings in the form of ["127.0.0.1:5000","127.0.0.1:5001","127.0.0.1:5002"]
 
@@ -115,7 +128,13 @@ def start_mining(block_queue, transaction_queue):
                 sending_block = blockchain.last_block()
                 data = pickle.dumps(sending_block, protocol=2)
                 for miner_ip in LIST_OF_MINER_IP:
-                    r = requests.post("http://"+miner_ip+"/block", data=data)
+                    send_failed = True
+                    while send_failed:
+                        try:
+                            r = requests.post("http://"+miner_ip+"/block", data=data)
+                            send_failed = False
+                        except:
+                            pass
                     # print(r.json())
                 break
             # Checks value of nonce, as checking queue every cycle makes it very laggy
@@ -127,7 +146,7 @@ def start_mining(block_queue, transaction_queue):
                     print("activate")
                     break
         # Section run if the miner found a block or receives a block that has been broadcasted
-        print(colorama.Fore.RED + str(miner.blockchain))
+        print(COLOR + str(miner.blockchain))
         # merkletree = create_merkle(transaction_queue)
 
 
