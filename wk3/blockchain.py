@@ -46,6 +46,14 @@ class BlockChain:
     # difficulty multiplier, ensures difficulty change is linear
     difficulty_multiplier = 1
 
+    def network_add(self, block):
+        # Checks if block is valid before adding
+        if True:
+            self.chain[binascii.hexlify(block.header_hash()).decode()] = block
+            return True
+        else:
+            return False
+
     def add(self, block):
         # Checks if block is valid before adding
         if self.validate(block):
@@ -57,7 +65,7 @@ class BlockChain:
     def validate(self, block):
         if len(self.chain) > 0:
             # Checks for previous header and target value
-            check_previous_header = block.previous_header_hash in self.chain and block.previous_header_hash is not None
+            check_previous_header = block.previous_header_hash in self.chain or block.previous_header_hash is None
             check_target = block.header_hash() < self.TARGET
             # print(check_previous_header, check_target)
             return check_previous_header and check_target
@@ -67,15 +75,21 @@ class BlockChain:
 
     def resolve(self):
         if len(self.chain) > 0:
+            longest_chain_length = 0
             for hash_value in self.chain:
                 if self.chain[hash_value].previous_header_hash == None:
                     # Find the genesis block's hash value
                     genesis_hash_value = hash_value
-                    break
-            # Start DP function
-            self.cleaned_keys = self.resolve_DP(
-                genesis_hash_value, 0, [genesis_hash_value])[1]
-            self.last_hash = self.cleaned_keys[-1]
+                    # Start DP function
+                    temp_cleaned_keys = self.resolve_DP(
+                        genesis_hash_value, 0, [genesis_hash_value])[1]
+                    if len(temp_cleaned_keys) > longest_chain_length:
+                        self.cleaned_keys = copy.deepcopy(temp_cleaned_keys)
+                        longest_chain_length = len(temp_cleaned_keys)
+            try:
+                self.last_hash = self.cleaned_keys[-1]
+            except IndexError:
+                self.last_hash = None
 
     def resolve_DP(self, hash_check, score, cleared_hashes):
         # Assuming this is the last block in the chain, it first saves itself to the list
@@ -101,13 +115,13 @@ class BlockChain:
         reply = "-----------------\nThere are {} blocks in the blockchain\n\n".format(
             len(self.chain))
         for count, i in enumerate(self.chain):
-            if count == 0:
-                reply += "Genesis Block \t"
-            else:
-                reply += "Block {} \t".format(str(count).zfill(5))
-            reply += "\tHeader: {}\tPrev_header: {}\n\n".format(
+            reply += "Header: {}\tPrev_header: {}\n".format(
                 str(i), str(self.chain[i].previous_header_hash))
-        reply += str(self.cleaned_keys)
+        reply += "\nThe longest chain is {} blocks\n".format(
+            len(self.cleaned_keys))
+        for count, i in enumerate(self.cleaned_keys):
+            reply += i[:10] + " -> "
+        reply = reply[:-4]
         return reply
 
     def last_block(self):
