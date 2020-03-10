@@ -10,6 +10,7 @@ import pickle
 import requests
 import sys
 import getopt
+import colorama
 
 app = Flask(__name__)
 
@@ -126,7 +127,7 @@ def start_mining(block_queue, transaction_queue):
                     print("activate")
                     break
         # Section run if the miner found a block or receives a block that has been broadcasted
-        print(miner.blockchain)
+        print(colorama.Fore.RED + str(miner.blockchain))
         # merkletree = create_merkle(transaction_queue)
 
 
