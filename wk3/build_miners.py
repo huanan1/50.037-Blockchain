@@ -20,6 +20,6 @@ for count, i in enumerate(list_of_miner_ports):
     f = open("partner_miner_ip.txt", "w+")
     f.writelines(list_of_partner_miners)
     f.close()
-    os.system("python3 miner.py -p {0} -i partner_miner_ip.txt -c {1} &".format(i, colors[count%len(colors)]))
+    os.system("python3 miner.py -p {0} -i partner_miner_ip.txt -c {1} -m 2&".format(i, colors[count%len(colors)]))
     time.sleep(2) if count == 0 else time.sleep(2)
     os.system('rm partner_miner_ip.txt')
