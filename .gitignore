@@ -130,3 +130,4 @@ dmypy.json
 .vscode/
 
 generated_miners/
+partner_miner_ip.txt
