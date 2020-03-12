@@ -4,18 +4,20 @@ from merkle_tree import MerkleTree
 import random
 import time
 import copy
+import queue
 
-MY_IP = "$MY_IP_HERE"
-LIST_OF_MINER_IP = "$LIST_OF_MINER_IP_HERE"
-# MY_IP will be a single string in the form of "127.0.0.1:5000"
-# LIST_OF_MINER_IP will be a list of strings in the form of ["127.0.0.1:5000","127.0.0.1:5001","127.0.0.1:5002"]
+SELFISH_IP = "$MY_IP_HERE"
+LIST_OF_SELFISH_MINER_IP = "$LIST_OF_MINER_IP_HERE"
+# SELFISH_IP will be a single string in the form of "127.0.0.1:5000"
+# LIST_OF_SELFISH_MINER_IP will be a list of strings in the form of ["127.0.0.1:5000","127.0.0.1:5001","127.0.0.1:5002"]
 
-class Miner:
+class SelfishMiner:
 
     def __init__(self, blockchain):
         self.blockchain = copy.deepcopy(blockchain)
         self.nonce = 0
         self.current_time = str(time.time())
+        self.withheld_blocks = queue.Queue()
 
     def mine(self, merkletree):
         block = Block(merkletree, self.blockchain.last_hash,
@@ -23,7 +25,7 @@ class Miner:
         if self.blockchain.add(block):
             # If the add is successful, reset
             self.new_block(self.blockchain.chain)
-            print(MY_IP)
+            print(SELFISH_IP)
             return True
         self.nonce += 1
         # print(block.header_hash())
@@ -38,6 +40,13 @@ class Miner:
         # check should be in here or resolve?
         self.blockchain.difficulty_adjust()
 
+    def broadcast_blocks(self, num):
+        if num > self.withheld_blocks.qsize():
+            raise Exception("Insufficient withheld blocks!")
+        for i in range(num):
+            blocks = self.withheld_blocks.get()
+            #TODO: to broadcast the blocks to network after this?
+
 # Random Merkletree
 def create_sample_merkle():
     merkletree = MerkleTree()
@@ -49,8 +58,8 @@ def create_sample_merkle():
 
 merkletree = create_sample_merkle()
 blockchain = BlockChain()
-miner1, miner2, miner3 = Miner(blockchain), Miner(
-    blockchain), Miner(blockchain)
+miner1, miner2, miner3 = SelfishMiner(blockchain), SelfishMiner(
+    blockchain), SelfishMiner(blockchain)
 while True:
     miner1_status, miner2_status, miner3_status = False, False, False
     while not (miner1_status or miner2_status or miner3_status):
