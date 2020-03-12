@@ -128,3 +128,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 .vscode/
+
+generated_miners/
+partner_miner_ip.txt

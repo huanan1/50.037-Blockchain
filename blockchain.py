@@ -46,6 +46,31 @@ class BlockChain:
     # difficulty multiplier, ensures difficulty change is linear
     difficulty_multiplier = 1
 
+    def network_add(self, block):
+        # Checks if block received by networks is valid before adding
+        # TODO So right, this one needs to have a caching thing? idk now it just accepts all blocks HUAN AN SOLVE THANKS
+
+        # Idea why not no caching, just check all blocks? Like what if we move the checks to the resolve function?
+        # Like, what if network add doesn't really care if a TX is valid, only when validate is called, then it checks EVERYTHING, may be ineffecient
+        # But it gets us the points?
+
+        # Validation should be here ah coz this is for all 'network' blocks
+        # the add and validate functions are for local blocks, so i just assume all is correct alr
+        # What should this check?
+        # 1. All transactions are valid, so, idk need to work this out with Youngmin ASAP, but like
+        #    assuming all the blocks have their own ledger, you need to double check the prev_header_hash
+        #    and check that ledger to see if the account has enough money
+        # 2. You also need to check TXID is not duplicated for any blocks before this one, rmb if its
+        #    after this block, aka tthis is a fork, it CAN be duplicated
+        #
+        # After all these verifications,  51% attack and selfish mining should be okay
+        # The list of headers in order is cleaned_keys btw, if its not working as intended, just call resolve
+        if True:
+            self.chain[binascii.hexlify(block.header_hash()).decode()] = block
+            return True
+        else:
+            return False
+
     def add(self, block):
         # Checks if block is valid before adding
         if self.validate(block):
@@ -57,7 +82,7 @@ class BlockChain:
     def validate(self, block):
         if len(self.chain) > 0:
             # Checks for previous header and target value
-            check_previous_header = block.previous_header_hash in self.chain and block.previous_header_hash is not None
+            check_previous_header = block.previous_header_hash in self.chain or block.previous_header_hash is None
             check_target = block.header_hash() < self.TARGET
             # print(check_previous_header, check_target)
             return check_previous_header and check_target
@@ -66,22 +91,22 @@ class BlockChain:
             return block.header_hash() < self.TARGET
 
     def resolve(self):
-        for hash_value in self.chain:
-            if self.chain[hash_value].previous_header_hash == None:
-                # Find the genesis block's hash value
-                genesis_hash_value = hash_value
-                break
-        # Create a new chain
-        cleaned_chain = dict()
-        # Start DP function
-        self.cleaned_keys = self.resolve_DP(
-            genesis_hash_value, 0, [genesis_hash_value])[1]
-        self.last_hash = self.cleaned_keys[-1]
-        # Recreates chain based on output of DP function
-        for i in self.chain:
-            if i in self.cleaned_keys:
-                cleaned_chain[i] = self.chain[i]
-        self.chain = copy.deepcopy(cleaned_chain)
+        if len(self.chain) > 0:
+            longest_chain_length = 0
+            for hash_value in self.chain:
+                if self.chain[hash_value].previous_header_hash == None:
+                    # Find the genesis block's hash value
+                    genesis_hash_value = hash_value
+                    # Start DP function
+                    temp_cleaned_keys = self.resolve_DP(
+                        genesis_hash_value, 0, [genesis_hash_value])[1]
+                    if len(temp_cleaned_keys) > longest_chain_length:
+                        self.cleaned_keys = copy.deepcopy(temp_cleaned_keys)
+                        longest_chain_length = len(temp_cleaned_keys)
+            try:
+                self.last_hash = self.cleaned_keys[-1]
+            except IndexError:
+                self.last_hash = None
 
     def resolve_DP(self, hash_check, score, cleared_hashes):
         # Assuming this is the last block in the chain, it first saves itself to the list
@@ -103,45 +128,50 @@ class BlockChain:
             if i[0] == highest_score:
                 return i
 
+    # Returns the last block in the chain
+    def last_block(self):
+        self.resolve()
+        if self.last_hash is not None:
+            return self.chain[self.last_hash]
+        else:
+            return None
+
     def __str__(self):
         reply = "-----------------\nThere are {} blocks in the blockchain\n\n".format(
             len(self.chain))
         for count, i in enumerate(self.chain):
-            if count == 0:
-                reply += "Genesis Block \t"
-            else:
-                reply += "Block {} \t".format(str(count).zfill(5))
-            reply += "\tHeader: {}\tPrev_header: {}\n".format(
+            reply += "Header: {}\tPrev_header: {}\n".format(
                 str(i), str(self.chain[i].previous_header_hash))
+        reply+="\n~~~\n"
+        reply += "The longest chain is {} blocks\n".format(
+            len(self.cleaned_keys))
+        for count, i in enumerate(self.cleaned_keys):
+            reply += i[:10] + " -> "
+        reply = reply[:-4]
         return reply
 
-    def last_block(self):
-        if not None:
-            return self.chain[self.last]
-        else:
-            return None
+    # REMOVED DIFFICULTY as cannot sync across miners
 
-    def difficulty_adjust(self):
-        # Length of TARGET byte object
-        TARGET_length = 16
-        # Because we are basing on cleaned_keys list, we need to make sure chain and cleaned_list are the same
-        if len(self.chain) != len(self.cleaned_keys):
-            self.resolve()
-        no_of_blocks = len(self.cleaned_keys)
-        # Every X number of blocks, run difficulty check
-        if no_of_blocks % self.difficulty_interval == 0 and no_of_blocks > 0:
-            if no_of_blocks >= self.difficulty_interval:
-                # Get average time difference across X number of blocks
-                time_diff = float(self.chain[self.cleaned_keys[-1]].timestamp) - \
-                    float(self.chain[self.cleaned_keys[-5]].timestamp)
-                average_time = time_diff/self.difficulty_interval
-                # Change target depending on how the time average
-                TARGET_int = int.from_bytes(self.TARGET, 'big')
-                TARGET_int += int((self.target_average_time -
-                                   average_time) * self.difficulty_multiplier)
-                # todo limits and max/min
-                self.TARGET = TARGET_int.to_bytes(16, 'big')
-                print("Target adjusted:" + str(self.TARGET))
+    # def difficulty_adjust(self):
+    #     # Length of TARGET byte object
+    #     TARGET_length = 16
+    #     # Because we are basing on cleaned_keys list, we need to make sure chain and cleaned_list are the same
+    #     self.resolve()
+    #     no_of_blocks = len(self.cleaned_keys)
+    #     # Every X number of blocks, run difficulty check
+    #     if no_of_blocks % self.difficulty_interval == 0 and no_of_blocks > 0:
+    #         if no_of_blocks >= self.difficulty_interval:
+    #             # Get average time difference across X number of blocks
+    #             time_diff = float(self.chain[self.cleaned_keys[-1]].timestamp) - \
+    #                 float(self.chain[self.cleaned_keys[-5]].timestamp)
+    #             average_time = time_diff/self.difficulty_interval
+    #             # Change target depending on how the time average
+    #             TARGET_int = int.from_bytes(self.TARGET, 'big')
+    #             TARGET_int += int((self.target_average_time -
+    #                                average_time) * self.difficulty_multiplier)
+    #             # todo limits and max/min
+    #             self.TARGET = TARGET_int.to_bytes(16, 'big')
+    #             print("Target adjusted:" + str(self.TARGET))
 
 
 # Test
