@@ -1,6 +1,3 @@
-from blockchain import BlockChain, Block, SPVBlock
-from transaction import Transaction
-from merkle_tree import MerkleTree
 import random
 import time
 import copy
@@ -9,8 +6,13 @@ import requests
 import sys
 import getopt
 import colorama
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from multiprocessing import Process, Queue
+
+from blockchain import BlockChain, Block, SPVBlock
+from transaction import Transaction
+from merkle_tree import MerkleTree
+
 
 app = Flask(__name__)
 
@@ -25,18 +27,18 @@ def parse_arguments(argv):
     mode = 1
     try:
         opts, args = getopt.getopt(
-            argv, "hp:im:is:c:m:s:", ["port=", "iminerfile=", "ispvfile=","color=", "mode=","selfish="])
+            argv, "hp:m:s:c:d:s:", ["port=", "iminerfile=", "ispvfile=","color=", "description=","selfish="])
     # Only port and input is mandatory
     except getopt.GetoptError:
-        print('miner.py -p <port> -im <inputfile of list of IPs of other miners> -is <inputfile of list of IPs of SPV clients> -c <color w|r|h|y|m|c> -m <mode 1/2> -s <1 if selfish miner>')
+        print('miner.py -p <port> -m <inputfile of list of IPs of other miners> -s <inputfile of list of IPs of SPV clients> -c <color w|r|h|y|m|c> -d <description 1/2> -s <1 if selfish miner>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('miner.py -p <port> -im <inputfile of list of IPs of other miners> -is <inputfile of list of IPs of SPV clients> -c <color w|r|h|y|m|c> -m <mode 1/2> -s <1 if selfish miner>')
+            print('miner.py -p <port> -m <inputfile of list of IPs of other miners> -s <inputfile of list of IPs of SPV clients> -c <color w|r|h|y|m|c> -d <description 1/2> -s <1 if selfish miner>')
             sys.exit()
         elif opt in ("-p", "--port"):
             my_port = arg
-        elif opt in ("-im", "--iminerfile"):
+        elif opt in ("-m", "--iminerfile"):
             inputfile = arg
             f = open(inputfile, "r")
             for line in f:
@@ -57,11 +59,11 @@ def parse_arguments(argv):
                 color = colorama.Fore.MAGENTA
             elif color_arg == "c":
                 color = colorama.Fore.CYAN
-        elif opt in ("-m", "--mode"):
+        elif opt in ("-d", "--description"):
             mode_arg = arg
             if mode_arg == "2":
                 mode = 2
-        elif opt in ("-is", "--ispvfile"):
+        elif opt in ("-s", "--ispvfile"):
             inputfile = arg
             f = open(inputfile, "r")
             for line in f:
@@ -253,9 +255,8 @@ def new_transaction_network():
 
 @app.route('/request_blockchain')
 def request_blockchain():
-    # Needs to add a proper transaction object, currently thing will fail
-    # TODO add rebroadcast of signal??
-    transaction_queue.put("a")
+    blockchain.resolve()
+    return jsonify({"blockchain_headers":blockchain.cleaned_keys})
 
 if __name__ == '__main__':
     p = Process(target=start_mining, args=(block_queue, transaction_queue,))

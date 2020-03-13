@@ -49,12 +49,12 @@ for count, i in enumerate(list_of_miner_ports):
     f.close()
     # Reads file
     if not SELFISH:
-        os.system("python3 miner.py -p {0} -i partner_miner_ip.txt -c {1} -m 2&".format(i, colors[count%len(colors)]))
+        os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -c {1} -d 2&".format(i, colors[count%len(colors)]))
     else:
         if count == 0:
-            os.system("python3 miner.py -p {0} -i partner_miner_ip.txt -c {1} -m 2 -s 1&".format(i, colors[count%len(colors)]))
+            os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -c {1} -d 2 -s 1&".format(i, colors[count%len(colors)]))
         else:
-            os.system("python3 miner.py -p {0} -i partner_miner_ip.txt -c {1} -m 2&".format(i, colors[count%len(colors)]))
+            os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -c {1} -d 2&".format(i, colors[count%len(colors)]))
     time.sleep(2)
     # Removes file for cleanup
     os.system('rm partner_miner_ip.txt')
