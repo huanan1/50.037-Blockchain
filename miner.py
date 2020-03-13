@@ -65,7 +65,6 @@ def parse_arguments(argv):
                 selfish = True
     return my_port, list_of_miner_ip, color, mode, selfish
 
-
 # Get data from arguments
 MY_PORT, LIST_OF_MINER_IP, COLOR, MODE, SELFISH = parse_arguments(sys.argv[1:])
 # MY_IP will be a single string in the form of "127.0.0.1:5000"
@@ -73,6 +72,7 @@ MY_PORT, LIST_OF_MINER_IP, COLOR, MODE, SELFISH = parse_arguments(sys.argv[1:])
 # COLOR is color of text using colorama library
 # MODE is either 1 or 2, 1 is full details, 2 is shortform
 # SELFISH if True, this miner will be a selfish miner
+
 
 def get_miner_ips():
     return LIST_OF_MINER_IP
@@ -111,8 +111,14 @@ class Miner:
 # Random Merkletree
 def create_sample_merkle():
     merkletree = MerkleTree()
-    for i in range(100):
-        merkletree.add(random.randint(100, 1000))
+    from ecdsa import SigningKey
+    sender = SigningKey.generate()
+    receiver = SigningKey.generate()
+    for i in range(10):
+        if i == 0:
+            # coinbase
+            merkletree.add(Transaction(sender, receiver, 100).to_json())
+        merkletree.add(Transaction(sender, receiver, random.randint(100, 1000)).to_json())
     merkletree.build()
     return merkletree
 
@@ -150,7 +156,7 @@ def create_merkle(transaction_queue):
     merkletree.build()
     return merkletree
 
-blockchain = BlockChain()
+blockchain = BlockChain(LIST_OF_MINER_IP)
 def start_mining(block_queue, transaction_queue):
     merkletree = create_sample_merkle()
     miner = Miner(blockchain)
@@ -215,6 +221,7 @@ def start_mining(block_queue, transaction_queue):
         print(COLOR + "PORT: {}\n".format(MY_PORT) + mine_or_recv +
               (str(miner.blockchain) if MODE == 1 else str(miner.blockchain).split("~~~\n")[1]))
         # merkletree = create_merkle(transaction_queue)
+
 
 # Queue objects for passing stuff between processes
 block_queue = Queue()

@@ -4,7 +4,9 @@ import random
 import time
 import binascii
 import copy
+import requests
 from transaction import Transaction
+import pickle
 
 class Block:
     def __init__(self, transactions, previous_header_hash, hash_tree_root, timestamp, nonce):
@@ -48,6 +50,9 @@ class BlockChain:
     # network cached blocks contain blocks that are rejected, key is prev hash header, value is block
     network_cached_blocks = dict()
 
+    def __init__(self, miner_ips):
+        self.miner_ips = miner_ips
+
     def network_add(self, block):
         # check for genesis block
         if block.previous_header_hash is None:
@@ -62,7 +67,7 @@ class BlockChain:
             self.chain[binascii.hexlify(block.header_hash()).decode()] = block
             return True
 
-        # check again that incoming block has prev hash and target < nonce (in case malicious miner publishing invalid blocks?)
+        # check again that incoming block has prev hash and target < nonce (in case malicious miner publishing invalid blocks)
         check1 = self.validate(block)
         # check if transactions are valid (sender has enough money, and TXIDs have not appeared in the previous blocks)
         check2 = self.verify_transactions(block.transactions.leaf_set, block.previous_header_hash)
@@ -133,8 +138,35 @@ class BlockChain:
             # If Genesis block, there is no need to check for the last hash value
             return block.header_hash() < self.TARGET
 
+
+    def rebroadcast_transactions(self, block):
+        '''rebroadcast transactions from dropped blocks'''
+        transactions = block.transactions.leaf_set
+        # convert transactions to Transaction objects
+        for i, transaction in enumerate(transactions):
+            transactions[i] = Transaction.from_json(transaction)
+
+        not_sent = True
+        for miner_ip in self.miner_ips:
+            for transaction in transactions:
+                data = pickle.dumps(transaction, protocol=2)
+                while not_sent:
+                    try:
+                        requests.post("http://"+miner_ip +
+                                    "/transaction", data=data)
+                        not_sent = False
+                    except:
+                        time.sleep(0.1)
+        return True
+
+    def find_dropped_blocks(self):
+        dropped_blocks = dict()
+        for hash_value in self.chain:
+            if hash_value not in self.cleaned_keys:
+                dropped_blocks[hash_value] = self.chain[hash_value]
+        return dropped_blocks
+
     def resolve(self):
-        # TODO: rebroadcast transactions from dropped forks
         if len(self.chain) > 0:
             longest_chain_length = 0
             for hash_value in self.chain:
@@ -151,6 +183,14 @@ class BlockChain:
                 self.last_hash = self.cleaned_keys[-1]
             except IndexError:
                 self.last_hash = None
+
+            dropped_blocks = self.find_dropped_blocks()
+            for _, block in dropped_blocks.items():
+                rebroadcasted = False
+                while not rebroadcasted:
+                    # retry rebroadcasting until it succeeds
+                    rebroadcasted = self.rebroadcast_transactions(block)
+                
 
     def resolve_DP(self, hash_check, score, cleared_hashes):
         # Assuming this is the last block in the chain, it first saves itself to the list
@@ -194,34 +234,10 @@ class BlockChain:
         reply = reply[:-4]
         return reply
 
-    # REMOVED DIFFICULTY as cannot sync across miners
-
-    # def difficulty_adjust(self):
-    #     # Length of TARGET byte object
-    #     TARGET_length = 16
-    #     # Because we are basing on cleaned_keys list, we need to make sure chain and cleaned_list are the same
-    #     self.resolve()
-    #     no_of_blocks = len(self.cleaned_keys)
-    #     # Every X number of blocks, run difficulty check
-    #     if no_of_blocks % self.difficulty_interval == 0 and no_of_blocks > 0:
-    #         if no_of_blocks >= self.difficulty_interval:
-    #             # Get average time difference across X number of blocks
-    #             time_diff = float(self.chain[self.cleaned_keys[-1]].timestamp) - \
-    #                 float(self.chain[self.cleaned_keys[-5]].timestamp)
-    #             average_time = time_diff/self.difficulty_interval
-    #             # Change target depending on how the time average
-    #             TARGET_int = int.from_bytes(self.TARGET, 'big')
-    #             TARGET_int += int((self.target_average_time -
-    #                                average_time) * self.difficulty_multiplier)
-    #             # todo limits and max/min
-    #             self.TARGET = TARGET_int.to_bytes(16, 'big')
-    #             print("Target adjusted:" + str(self.TARGET))
-
-
 # Test
 def main():
     # Create blockchain
-    blockchain = BlockChain()
+    blockchain = BlockChain([])
 
     # Genesis block
     merkletree = MerkleTree()
@@ -260,7 +276,7 @@ def main():
 
 def test_network_add():
     # Create blockchain
-    blockchain = BlockChain()
+    blockchain = BlockChain([])
 
     from ecdsa import SigningKey
     sender = SigningKey.generate()
