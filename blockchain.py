@@ -4,7 +4,7 @@ import random
 import time
 import binascii
 import copy
-
+from transaction import Transaction
 
 class Block:
     def __init__(self, transactions, previous_header_hash, hash_tree_root, timestamp, nonce):
@@ -45,31 +45,74 @@ class BlockChain:
     difficulty_interval = 5
     # difficulty multiplier, ensures difficulty change is linear
     difficulty_multiplier = 1
+    # network cached blocks contain blocks that are rejected, key is prev hash header, value is block
+    network_cached_blocks = dict()
 
     def network_add(self, block):
-        # Checks if block received by networks is valid before adding
-        # TODO So right, this one needs to have a caching thing? idk now it just accepts all blocks HUAN AN SOLVE THANKS
-
-        # Idea why not no caching, just check all blocks? Like what if we move the checks to the resolve function?
-        # Like, what if network add doesn't really care if a TX is valid, only when validate is called, then it checks EVERYTHING, may be ineffecient
-        # But it gets us the points?
-
-        # Validation should be here ah coz this is for all 'network' blocks
-        # the add and validate functions are for local blocks, so i just assume all is correct alr
-        # What should this check?
-        # 1. All transactions are valid, so, idk need to work this out with Youngmin ASAP, but like
-        #    assuming all the blocks have their own ledger, you need to double check the prev_header_hash
-        #    and check that ledger to see if the account has enough money
-        # 2. You also need to check TXID is not duplicated for any blocks before this one, rmb if its
-        #    after this block, aka tthis is a fork, it CAN be duplicated
-        #
-        # After all these verifications,  51% attack and selfish mining should be okay
-        # The list of headers in order is cleaned_keys btw, if its not working as intended, just call resolve
-        if True:
+        # check for genesis block
+        if block.previous_header_hash is None:
+            # check that number of transactions is 1 in genesis block
+            if len(block.transactions.leaf_set) != 1:
+                print("genesis block should have only one transaction.")
+                return False
+            coinbase_tx = Transaction.from_json(block.transactions.leaf_set[0])
+            if coinbase_tx.amount != 100:
+                print("coinbase transaction should have amount == 100")
+                return False
             self.chain[binascii.hexlify(block.header_hash()).decode()] = block
             return True
+
+        # check again that incoming block has prev hash and target < nonce (in case malicious miner publishing invalid blocks?)
+        check1 = self.validate(block)
+        # check if transactions are valid (sender has enough money, and TXIDs have not appeared in the previous blocks)
+        check2 = self.verify_transactions(block.transactions.leaf_set, block.previous_header_hash)
+
+        if check1 and check2:
+            header_hash = binascii.hexlify(block.header_hash()).decode()
+            self.chain[header_hash] = block
+            # check rejected blocks
+            if header_hash in self.network_cached_blocks:
+                next_block = self.network_cached_blocks.get(header_hash)
+                if self.network_add(next_block):
+                    # delete from rejected list if block added to blockchain
+                    del self.network_cached_blocks[header_hash]
+            return True
         else:
+            self.network_cached_blocks[binascii.hexlify(block.header_hash()).decode()] = block
             return False
+
+    def verify_transactions(self, transactions, prev_header_hash):
+        self.resolve() # ensure cleaned_keys updated
+        # obtain blocks in blockchain uptil block with previous header hash
+        chain_uptil_prev = self.cleaned_keys[:self.cleaned_keys.index(prev_header_hash)+1]
+        
+        # convert transactions to Transaction objects
+        for i, transaction in enumerate(transactions):
+            transactions[i] = Transaction.from_json(transaction)
+
+        # check coinbase transaction amount
+        if transactions[0].amount != 100:
+            return False
+        
+        # loop through all previous blocks
+        for hash in reversed(chain_uptil_prev):
+            prev_hash = prev_header_hash
+            prev_merkle_tree = self.chain[prev_hash].transactions
+            # loop through transactions in prev block
+            for i, transaction in enumerate(transactions[1:]):
+                # check if transaction has appeared in previous blocks
+                if prev_merkle_tree.get_proof(transaction) != []:
+                    # transaction repeated
+                    print(f"this transaction appeared before. Transaction: {transaction}")
+                    return False
+        
+        # for transaction in transactions:
+            # check if transaction was really sent by the sender
+            # transaction.validate(transaction.sig)
+            # check if sender has enough money
+            # if Ledger.get_balance(transaction.sender) - transaction.amount < 0:
+                # return False
+        return True
 
     def add(self, block):
         # Checks if block is valid before adding
@@ -91,6 +134,7 @@ class BlockChain:
             return block.header_hash() < self.TARGET
 
     def resolve(self):
+        # TODO: rebroadcast transactions from dropped forks
         if len(self.chain) > 0:
             longest_chain_length = 0
             for hash_value in self.chain:
@@ -214,6 +258,53 @@ def main():
     print("Done resolve")
     print(blockchain)
 
+def test_network_add():
+    # Create blockchain
+    blockchain = BlockChain()
+
+    from ecdsa import SigningKey
+    sender = SigningKey.generate()
+    receiver = SigningKey.generate()
+
+    # Genesis block
+    merkletree = MerkleTree()
+    for i in range(1):
+        merkletree.add(Transaction(sender, sender, 100).to_json())
+    merkletree.build()
+    current_time = str(time.time())
+    for nonce in range(10000000):
+        block = Block(merkletree, None, merkletree.get_root(),
+                      current_time, nonce)
+        # If the add is successful, stop loop
+        if blockchain.validate(block):
+            blockchain.network_add(block)
+            break
+    print(blockchain)
+
+    # Other blocks (non-linear)
+    for i in range(2):
+        merkletree = MerkleTree()
+        for i in range(5):
+            if i == 0: merkletree.add(Transaction(sender, receiver, 100).to_json())
+            else:
+                merkletree.add(Transaction(sender, receiver, random.randint(100,1000)).to_json())
+        merkletree.build()
+        current_time = str(time.time())
+        last_hash = random.choice(
+            list(blockchain.chain.keys()))
+        for nonce in range(10000000):
+            block = Block(merkletree, last_hash,
+                          merkletree.get_root(), current_time, nonce)
+            if blockchain.validate(block):
+                blockchain.network_add(block)
+                # If the add is successful, stop loop
+                break
+        print(blockchain)
+
+    blockchain.resolve()
+    print("Done resolve")
+    print(blockchain)
+
 
 if __name__ == '__main__':
-    main()
+    test_network_add()
