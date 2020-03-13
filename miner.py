@@ -125,7 +125,7 @@ def create_sample_merkle():
 # have the latest ledger to be used here in the merkle_tree
 
 # There are 2 main checks to be done here
-# 1. The accounts involved have enough money to transact, depending on the ledger
+# 1. The accounts involved have enough money to transact, depending on the ledger (dictionary - key(public address):value(amount left))
 # 2. TXID (hash of transaction, not created yet) is not duplicated. I can't think of a way other than looking through EVERY transaction
 
 # Creates a merkle tree by compiling all of the transactions in transaction_queue
@@ -158,7 +158,7 @@ def start_mining(block_queue, transaction_queue):
     # Infinite loop
     while True:
         while True:
-            # Mines the once every round
+            # Mines the nonce every round
             miner_status = miner.mine(merkletree)
             mine_or_recv = ""
             # Check if that mine is successful
