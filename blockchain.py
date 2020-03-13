@@ -106,9 +106,9 @@ class BlockChain:
                     print(f"this transaction appeared before. Transaction: {transaction}")
                     return False
         
-        # for transaction in transactions:
+        for transaction in transactions:
             # check if transaction was really sent by the sender
-            # transaction.validate(transaction.sig)
+            transaction.validate(transaction.sig)
             # check if sender has enough money
             # if Ledger.get_balance(transaction.sender) - transaction.amount < 0:
                 # return False
@@ -285,7 +285,7 @@ def test_network_add():
     for i in range(2):
         merkletree = MerkleTree()
         for i in range(5):
-            if i == 0: merkletree.add(Transaction(sender, receiver, 100).to_json())
+            if i == 0: merkletree.add(Transaction(sender, sender, 100).to_json())
             else:
                 merkletree.add(Transaction(sender, receiver, random.randint(100,1000)).to_json())
         merkletree.build()
