@@ -10,10 +10,12 @@ class MerkleTree:
     def __init__(self):
         # leaf_unset is the collection of leaves which haven't been built
         self.leaf_unset = []
+        # leaf_set is the collection of leaves in the built tree
+        self.leaf_set = []
 
-    def add(self, number):
+    def add(self, transaction_json):
         # Appended to the leaf_unset list
-        self.leaf_unset.append(str(number).encode())
+        self.leaf_unset.append(transaction_json.encode())
 
     def build(self):
         # tree is the full collection of all non-leaves, i.e. this not contain any plaintext items
