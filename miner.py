@@ -158,10 +158,11 @@ def create_merkle(transaction_queue):
     merkletree.build()
     return merkletree
 
-blockchain = BlockChain()
-def start_mining(block_queue, transaction_queue):
-    merkletree = create_sample_merkle()
+
+def start_mining(block_queue, transaction_queue, blockchain_request_queue, blockchain_reply_queue):
+    blockchain = BlockChain()
     miner = Miner(blockchain)
+    merkletree = create_sample_merkle()
     miner_status = False
     list_of_blocks_selfish = []
     # Infinite loop
@@ -221,7 +222,7 @@ def start_mining(block_queue, transaction_queue):
                         list_of_blocks_selfish=[]
                 break
             # Checks value of nonce, as checking queue every cycle makes it very laggy
-            if miner.nonce % 10000 == 0:
+            if miner.nonce % 100000 == 0:
                 # Check if new blocks have been detected
                 if not block_queue.empty():
                     mine_or_recv = "Block RECEIVED\n"
@@ -230,6 +231,10 @@ def start_mining(block_queue, transaction_queue):
                     new_block = block_queue.get()
                     miner.network_block(new_block)
                     break
+                if not blockchain_request_queue.empty():
+                    print("Received request of blockchain")
+                    blockchain_request_queue.get()
+                    blockchain_reply_queue.put(miner.blockchain.cleaned_keys)
         # Section run if the miner found a block or receives a block that has been broadcasted
         print(COLOR + "PORT: {}\n".format(MY_PORT) + mine_or_recv +
               (str(miner.blockchain) if MODE == 1 else str(miner.blockchain).split("~~~\n")[1]))
@@ -238,7 +243,8 @@ def start_mining(block_queue, transaction_queue):
 # Queue objects for passing stuff between processes
 block_queue = Queue()
 transaction_queue = Queue()
-transaction_queue = Queue()
+blockchain_request_queue = Queue()
+blockchain_reply_queue = Queue()
 
 @app.route('/block', methods=['POST'])
 def new_block_network():
@@ -255,11 +261,12 @@ def new_transaction_network():
 
 @app.route('/request_blockchain')
 def request_blockchain():
-    blockchain.resolve()
-    return jsonify({"blockchain_headers":blockchain.cleaned_keys})
+    print("YES")
+    blockchain_request_queue.put(None)
+    return jsonify({"blockchain_headers":blockchain_reply_queue.get()})
 
 if __name__ == '__main__':
-    p = Process(target=start_mining, args=(block_queue, transaction_queue,))
+    p = Process(target=start_mining, args=(block_queue, transaction_queue,blockchain_request_queue, blockchain_reply_queue,))
     p.start()
     app.run(debug=True, use_reloader=False, port=MY_PORT)
     p.join()
