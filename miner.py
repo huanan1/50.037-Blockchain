@@ -74,6 +74,8 @@ MY_PORT, LIST_OF_MINER_IP, COLOR, MODE, SELFISH = parse_arguments(sys.argv[1:])
 # MODE is either 1 or 2, 1 is full details, 2 is shortform
 # SELFISH if True, this miner will be a selfish miner
 
+def get_miner_ips():
+    return LIST_OF_MINER_IP
 
 class Miner:
     def __init__(self, blockchain):
@@ -100,7 +102,6 @@ class Miner:
         # resets after every block is added, both network and locally
 
     # Called when a new block is received by another miner
-    # TODO Huan An, here is where the add is called, network_add should verify the block
     def network_block(self, block):
         # Checks if the n
         if self.blockchain.network_add(block):
@@ -227,11 +228,11 @@ def new_block_network():
     return ""
 
 
-@app.route('/transaction')
+@app.route('/transaction', methods=['POST'])
 def new_transaction_network():
-    # Needs to add a proper transaction object, currently thing will fail
-    # TODO add rebroadcast of signal??
-    transaction_queue.put("a")
+    new_transaction = pickle.loads(request.get_data())
+    transaction_queue.put(new_transaction)
+    return ""
 
 @app.route('/request_blockchain')
 def request_blockchain():
