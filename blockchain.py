@@ -29,6 +29,13 @@ class Block:
         m.update(round1)
         return m.digest()
 
+class SPVBlock:
+    def __init__(self, block):
+        # Instantiates object from passed values
+        self.header_hash = block.header_hash()
+        self.prev_header_hash = block.prev_header_hash
+        # TODO add ledger
+        self.ledger = None
 
 class BlockChain:
     # chain is a dictionary, key is hash header, value is the header metadata of blocks
