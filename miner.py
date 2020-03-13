@@ -6,6 +6,7 @@ import requests
 import sys
 import getopt
 import colorama
+import binascii
 from flask import Flask, request, jsonify
 from multiprocessing import Process, Queue
 
@@ -234,7 +235,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                 if not blockchain_request_queue.empty():
                     print("Received request of blockchain")
                     blockchain_request_queue.get()
-                    blockchain_reply_queue.put(miner.blockchain.cleaned_keys)
+                    blockchain_reply_queue.put((copy.deepcopy(blockchain.cleaned_keys), copy.deepcopy(blockchain.chain)))
         # Section run if the miner found a block or receives a block that has been broadcasted
         print(COLOR + "PORT: {}\n".format(MY_PORT) + mine_or_recv +
               (str(miner.blockchain) if MODE == 1 else str(miner.blockchain).split("~~~\n")[1]))
@@ -259,11 +260,27 @@ def new_transaction_network():
     # TODO add rebroadcast of signal??
     transaction_queue.put("a")
 
-@app.route('/request_blockchain')
-def request_blockchain():
-    print("YES")
+@app.route('/request_blockchain_headers')
+def request_blockchain_headers():
     blockchain_request_queue.put(None)
-    return jsonify({"blockchain_headers":blockchain_reply_queue.get()})
+    return jsonify({"blockchain_headers":blockchain_reply_queue.get()[0]})
+
+@app.route('/request_block/<header_hash>')
+def request_block(header_hash):
+    blockchain_request_queue.put(None)
+    chain = blockchain_reply_queue.get()[1]
+    # try:
+    block = chain[header_hash]
+    block_dictionary = dict()
+    block_dictionary["header_hash"] = header_hash
+    block_dictionary["previous_header_hash"] = block.previous_header_hash
+    block_dictionary["hash_tree_root"] = binascii.hexlify(block.hash_tree_root).decode()
+    block_dictionary["timestamp"] = block.timestamp
+    block_dictionary["nonce"] = block.nonce
+    return jsonify(block_dictionary)
+    # except:
+    #     return jsonify("Unable to find block")
+    
 
 if __name__ == '__main__':
     p = Process(target=start_mining, args=(block_queue, transaction_queue,blockchain_request_queue, blockchain_reply_queue,))
