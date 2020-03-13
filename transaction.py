@@ -36,7 +36,7 @@ class Transaction:
         json_dict['comment'] = self.comment
         json_dict['time'] = str(self.time)
         json_dict['txid'] = str(self.txid)
-        json_dict['sig'] = str(self.sig)
+        json_dict['sig'] = self.sig.hex()
         return json.dumps(json_dict)
 
     @classmethod
@@ -46,7 +46,7 @@ class Transaction:
         '''
         trans = json.loads(json_str)
         transaction = Transaction(SigningKey.from_string(binascii.unhexlify(bytes(trans['sender'], 'utf-8'))), SigningKey.from_string(
-            binascii.unhexlify(bytes(trans['receiver'], 'utf-8'))), int(trans['amount']), trans['comment'], float(trans['time']), trans['txid'], trans['sig'].encode())
+            binascii.unhexlify(bytes(trans['receiver'], 'utf-8'))), int(trans['amount']), trans['comment'], float(trans['time']), trans['txid'], bytes.fromhex(trans['sig']))
         return transaction
 
     def transaction_to_string(self):
@@ -91,4 +91,4 @@ class Transaction:
 # print(t1)
 # print(t1_back)
 # print(t1==t1_back)
-# t1.validate(t1.sig)
+# t1.validate(t1_back.sig)
