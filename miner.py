@@ -235,7 +235,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                 if not blockchain_request_queue.empty():
                     print("Received request of blockchain")
                     blockchain_request_queue.get()
-                    blockchain_reply_queue.put((copy.deepcopy(blockchain.cleaned_keys), copy.deepcopy(blockchain.chain)))
+                    blockchain_reply_queue.put((copy.deepcopy(blockchain.cleaned_keys), copy.deepcopy(blockchain.chain),copy.deepcopy(blockchain.last_block())))
         # Section run if the miner found a block or receives a block that has been broadcasted
         print(COLOR + "PORT: {}\n".format(MY_PORT) + mine_or_recv +
               (str(miner.blockchain) if MODE == 1 else str(miner.blockchain).split("~~~\n")[1]))
@@ -265,22 +265,60 @@ def request_blockchain_headers():
     blockchain_request_queue.put(None)
     return jsonify({"blockchain_headers":blockchain_reply_queue.get()[0]})
 
+@app.route('/request_full_blockchain')
+def request_full_blockchain():
+    blockchain_request_queue.put(None)
+    chain = blockchain_reply_queue.get()[1]
+    dic_chain = dict()
+    for i in chain:
+        block_dictionary = dict()
+        block = chain[i]
+        block_dictionary["header_hash"] =  binascii.hexlify(block.header_hash()).decode()
+        block_dictionary["previous_header_hash"] = block.previous_header_hash
+        block_dictionary["hash_tree_root"] = binascii.hexlify(block.hash_tree_root).decode()
+        block_dictionary["timestamp"] = block.timestamp
+        block_dictionary["nonce"] = block.nonce
+        # TODO Modify transactions when the real transactions come
+        transaction_list = []
+        for i in block.transactions.leaf_unset:
+            transaction_list.append(i.decode())
+        block_dictionary["transactions"] = transaction_list
+        dic_chain[block_dictionary["header_hash"]] = block_dictionary
+    return jsonify(dic_chain)
+
 @app.route('/request_block/<header_hash>')
 def request_block(header_hash):
     blockchain_request_queue.put(None)
     chain = blockchain_reply_queue.get()[1]
-    # try:
-    block = chain[header_hash]
+    try:
+        block = chain[header_hash]
+    except:
+        return jsonify("Unable to find block")
     block_dictionary = dict()
     block_dictionary["header_hash"] = header_hash
     block_dictionary["previous_header_hash"] = block.previous_header_hash
     block_dictionary["hash_tree_root"] = binascii.hexlify(block.hash_tree_root).decode()
     block_dictionary["timestamp"] = block.timestamp
     block_dictionary["nonce"] = block.nonce
+    # TODO Modify transactions when the real transactions come
+    transaction_list = []
+    for i in block.transactions.leaf_unset:
+        transaction_list.append(i.decode())
+    block_dictionary["transactions"] = transaction_list
     return jsonify(block_dictionary)
-    # except:
-    #     return jsonify("Unable to find block")
     
+@app.route('/account_balance/<public_key>')
+def request_account_balance(public_key):
+    blockchain_request_queue.put(None)
+    block = blockchain_reply_queue.get()[2]
+    # TODO
+    return None
+
+@app.route('/send_transaction?receiver=<receiver_public_key>&amount=<amount>')
+def request_send_transaction(receiver_public_key, amount):
+    # TODO Send to all miners
+    # TODO Add to own transaction queue
+    return None
 
 if __name__ == '__main__':
     p = Process(target=start_mining, args=(block_queue, transaction_queue,blockchain_request_queue, blockchain_reply_queue,))
