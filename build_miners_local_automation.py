@@ -36,11 +36,41 @@ SELFISH = parse_arguments(sys.argv[1:])
 f = open("miner_ports.txt", "r")
 list_of_miner_ports = []
 list_of_miner_ips = []
+list_of_miner_wallets = []
 for line in f:
-    list_of_miner_ports.append(line.strip())
+    single_line = line.strip().split("\t")
+    print(single_line)
+    list_of_miner_ports.append(single_line[0])
     list_of_miner_ips.append(
-        "127.0.0.1:" + line.strip())
+        "127.0.0.1:" + single_line[0])
+    if len(single_line) > 1:
+        list_of_miner_wallets.append(single_line[1])
+    else:
+        list_of_miner_wallets.append("NO_WALLET")
 f.close()
+print(list_of_miner_ips, list_of_miner_wallets)
+
+# Reads LOCAL ports to use via miner_ports.txt
+f = open("spv_ports.txt", "r")
+list_of_spv_ports = []
+list_of_spv_ips = []
+list_of_spv_wallets = []
+for line in f:
+    single_line = line.strip().split("\t")
+    list_of_spv_ports.append(single_line[0])
+    list_of_spv_ips.append(
+        "127.0.0.1:" + single_line[0])
+    if len(single_line) > 1:
+        list_of_spv_wallets.append(single_line[1])
+    else:
+        list_of_spv_wallets.append("NO_WALLET")
+f.close()
+
+f = open("spv_ip.txt", "w+")
+for i in list_of_spv_ips:
+    f.write(i+"\n")
+f.close()
+
 # Color args
 colors = ['w', 'r', 'g', 'y', 'b', 'm', 'c']
 for count, i in enumerate(list_of_miner_ports):
@@ -52,17 +82,25 @@ for count, i in enumerate(list_of_miner_ports):
         f.write(j+"\n")
     f.close()
     # Reads file
-    print(list_of_miner_ports, list_of_partner_miners, i)
     if not SELFISH:
-        os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -c {1} -d 2&".format(
-            i, colors[count % len(colors)]))
+        os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(
+            i, colors[count % len(colors)], list_of_miner_wallets[count]))
     else:
         if count == 0:
-            os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -c {1} -d 2 -s 1&".format(
+            os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2 -s 1&".format(
                 i, colors[count % len(colors)]))
         else:
-            os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -c {1} -d 2&".format(
+            os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(
                 i, colors[count % len(colors)]))
     time.sleep(2)
     # Removes file for cleanup
     os.system('rm partner_miner_ip.txt')
+
+f = open("miner_ip.txt", "w+")
+for i in list_of_miner_ips:
+    f.write(i+"\n")
+f.close()
+
+for count, i in enumerate(list_of_spv_ports):
+    os.system("python3 SPVClient.py -p {0} -m partner_miner_ip.txt -w {1}&".format(
+            i, "WALLET_KEY"))

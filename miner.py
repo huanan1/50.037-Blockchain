@@ -7,12 +7,15 @@ import sys
 import getopt
 import colorama
 import binascii
+import ecdsa
+from ecdsa import SigningKey
 from flask import Flask, request, jsonify
 from multiprocessing import Process, Queue
 
 from blockchain import BlockChain, Block, SPVBlock
 from transaction import Transaction
 from merkle_tree import MerkleTree
+
 
 
 app = Flask(__name__)
@@ -26,9 +29,10 @@ def parse_arguments(argv):
     list_of_miner_ip = []
     list_of_spv_ip = []
     mode = 1
+    private_key = None
     try:
         opts, args = getopt.getopt(
-            argv, "hp:m:s:c:d:s:", ["port=", "iminerfile=", "ispvfile=","color=", "description=","selfish="])
+            argv, "hp:m:s:c:d:s:w:", ["port=", "iminerfile=", "ispvfile=","color=", "description=","selfish=", "wallet="])
     # Only port and input is mandatory
     except getopt.GetoptError:
         print('miner.py -p <port> -m <inputfile of list of IPs of other miners> -s <inputfile of list of IPs of SPV clients> -c <color w|r|h|y|m|c> -d <description 1/2> -s <1 if selfish miner>')
@@ -44,6 +48,11 @@ def parse_arguments(argv):
             f = open(inputfile, "r")
             for line in f:
                 list_of_miner_ip.append(line.strip())
+        elif opt in ("-s", "--ispvfile"):
+            inputfile = arg
+            f = open(inputfile, "r")
+            for line in f:
+                list_of_spv_ip.append(line.strip())
         elif opt in ("-c", "--color"):
             color_arg = arg
             if color_arg == "w":
@@ -64,26 +73,28 @@ def parse_arguments(argv):
             mode_arg = arg
             if mode_arg == "2":
                 mode = 2
-        elif opt in ("-s", "--ispvfile"):
-            inputfile = arg
-            f = open(inputfile, "r")
-            for line in f:
-                list_of_spv_ip.append(line)
         elif opt in ("-s", "--selfish"):
             if arg=="1":
                 selfish = True
-    return my_port, list_of_miner_ip, list_of_spv_ip, color, mode, selfish
+        elif opt in ("-w", "--wallet"):
+            if arg != "NO_WALLET":
+                private_key = arg
+    return my_port, list_of_miner_ip, list_of_spv_ip, color, mode, selfish, private_key
 
 
 # Get data from arguments
-MY_PORT, LIST_OF_MINER_IP, LIST_OF_SPV_IP, COLOR, MODE, SELFISH = parse_arguments(sys.argv[1:])
+MY_PORT, LIST_OF_MINER_IP, LIST_OF_SPV_IP, COLOR, MODE, SELFISH, PRIVATE_KEY = parse_arguments(sys.argv[1:])
 # MY_IP will be a single string in the form of "127.0.0.1:5000"
 # LIST_OF_MINER_IP will be a list of strings in the form of ["127.0.0.1:5000","127.0.0.1:5001","127.0.0.1:5002"]
 # COLOR is color of text using colorama library
 # MODE is either 1 or 2, 1 is full details, 2 is shortform
 # SELFISH if True, this miner will be a selfish miner
 
-PUBLIC_KEY=None
+if PRIVATE_KEY is None:
+    PRIVATE_KEY = ecdsa.SigningKey.generate()
+PUBLIC_KEY = PRIVATE_KEY.get_verifying_key()
+PUBLIC_KEY_STRING = PUBLIC_KEY.to_string().hex()
+print(PUBLIC_KEY == binascii.unhexlify(bytes(PUBLIC_KEY_STRING, 'utf-8')))
 
 class Miner:
     def __init__(self, blockchain):
@@ -238,7 +249,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                     blockchain_request_queue.get()
                     blockchain_reply_queue.put((copy.deepcopy(blockchain.cleaned_keys), copy.deepcopy(blockchain.chain),copy.deepcopy(blockchain.last_block())))
         # Section run if the miner found a block or receives a block that has been broadcasted
-        print(COLOR + "PORT: {}\n".format(MY_PORT) + mine_or_recv +
+        print(COLOR + PUBLIC_KEY_STRING +"PORT: {}\n".format(MY_PORT) + mine_or_recv +
               (str(miner.blockchain) if MODE == 1 else str(miner.blockchain).split("~~~\n")[1]))
         # merkletree = create_merkle(transaction_queue)
 

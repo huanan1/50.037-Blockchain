@@ -52,11 +52,13 @@ class Transaction:
         return(self.sender == other.sender and self.receiver == other.receiver and self.amount == other.amount and self.comment == other.comment)
 
 
-# sender = SigningKey.generate()
+sender = SigningKey.generate()
 
-# receiver = SigningKey.generate()
-# receiver_vk = receiver.verifying_key
+receiver = SigningKey.generate()
+receiver_vk = receiver.verifying_key
 
-# t1 = Transaction(sender, receiver, 100)
-# t1_json = t1.to_json()
-# t1_back = Transaction.from_json(t1_json)
+t1 = Transaction(sender, receiver, 100)
+print(sender)
+t1_json = t1.to_json()
+t1_back = Transaction.from_json(t1_json)
+print(t1_back.sender)
