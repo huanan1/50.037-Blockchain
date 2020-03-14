@@ -150,8 +150,8 @@ class BlockChain:
         '''rebroadcast transactions from dropped blocks'''
         transactions = block.transactions.leaf_set
         # convert transactions to Transaction objects
-        for i, transaction in enumerate(transactions):
-            transactions[i] = Transaction.from_json(transaction)
+        # for i, transaction in enumerate(transactions):
+        #     transactions[i] = Transaction.from_json(transaction)
 
         not_sent = True
         for miner_ip in self.miner_ips:

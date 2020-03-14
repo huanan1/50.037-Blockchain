@@ -137,7 +137,7 @@ def create_sample_merkle():
         if i == 0:
             # coinbase
             merkletree.add(Transaction(sender, receiver, 100).to_json())
-        merkletree.add(Transaction(sender, receiver, random.randint(100, 1000)).to_json())
+        # merkletree.add(Transaction(sender, receiver, random.randint(100, 1000)).to_json())
     merkletree.build()
     return merkletree
 
@@ -254,7 +254,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                     blockchain_request_queue.get()
                     blockchain_reply_queue.put((copy.deepcopy(blockchain.cleaned_keys), copy.deepcopy(blockchain.chain),copy.deepcopy(blockchain.last_block())))
         # Section run if the miner found a block or receives a block that has been broadcasted
-        print(COLOR + PUBLIC_KEY_STRING +"PORT: {}\n".format(MY_PORT) + mine_or_recv +
+        print(COLOR +"PORT: {}\n".format(MY_PORT) + mine_or_recv +
               (str(miner.blockchain) if MODE == 1 else str(miner.blockchain).split("~~~\n")[1]))
         # merkletree = create_merkle(transaction_queue)
 
