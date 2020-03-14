@@ -65,7 +65,7 @@ class SPVClient:
 
     #TODO: Get balance from ledger in latest block
     #TODO: Update this part when ledger component is done!!
-    def check_balance(self):
+    def check_balance(self, header_hash, prev_header_hash, ledger):
         pass
 
 # Parsing arguments when entered via CLI
