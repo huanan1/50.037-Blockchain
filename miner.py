@@ -1,4 +1,4 @@
-from blockchain import BlockChain, Block, SPVBlock
+from blockchain import BlockChain, Block, SPVBlock, Ledger
 from transaction import Transaction
 from merkle_tree import MerkleTree
 import random
@@ -150,12 +150,16 @@ def create_merkle(transaction_queue):
             Transaction.from_json(transaction_queue.get()))
     for transaction in list_of_raw_transactions:
         # TODO: check if transaction makes sense in the ledger
-        if True:
+        if Ledger.verify_transaction(transaction,transactions="not sure how to do this", prev_header_hash= "not sure how to do this"):
             list_of_validated_transactions.append(transaction)
+
+        # if True:
+        #     list_of_validated_transactions.append(transaction)
 
     merkletree = MerkleTree()
     # TODO: Add coinbase TX
-    # merkletree.add(COINBASE_TRANSACTION)
+    merkletree.add(Transaction(PUBLIC_KEY,PUBLIC_KEY,100))
+
     for transaction in list_of_validated_transactions:
         merkletree.add(transaction.to_json())
     merkletree.build()
