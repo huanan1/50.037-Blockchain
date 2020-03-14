@@ -43,7 +43,7 @@ def parse_arguments(argv):
             inputfile = arg
             f = open(inputfile, "r")
             for line in f:
-                list_of_miner_ip.append(line)
+                list_of_miner_ip.append(line.strip())
         elif opt in ("-c", "--color"):
             color_arg = arg
             if color_arg == "w":
@@ -189,7 +189,8 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                                             "/block", data=data)
                                 send_failed = False
                             except:
-                                time.sleep(0.1)
+                                print("Send failed", miner_ip)
+                                time.sleep(0.2)
                 # If selfish miner
                 else:
                     mine_or_recv+="SELFISH MINING\n"
