@@ -236,14 +236,12 @@ def start_mining(block_queue, transaction_queue):
 # Queue objects for passing stuff between processes
 block_queue = Queue()
 transaction_queue = Queue()
-transaction_queue = Queue()
 
 @app.route('/block', methods=['POST'])
 def new_block_network():
     new_block = pickle.loads(request.get_data())
     block_queue.put(new_block)
     return ""
-
 
 @app.route('/transaction')
 def new_transaction_network():

@@ -3,10 +3,21 @@ from ecdsa import SigningKey
 from transaction import Transaction
 from blockchain import BlockChain, Block
 from merkle_tree import verify_proof
+from flask import Flask, request
+from multiprocessing import Process, Queue
 
 import time
 import getopt
 import sys
+import pickle
+import json
+import requests
+
+app = Flask(__name__)
+user = None
+block_header_queue = Queue()
+
+MY_PORT, LIST_OF_MINER_IP, WALLET = parse_arguments(sys.argv[1:])
 
 class SPVClient:
     '''
@@ -24,7 +35,7 @@ class SPVClient:
         self.PUBLIC_KEY = None
 
         # Private key of the wallet to sign outgoing transactions.
-        self.private_key = None
+        self.PRIVATE_KEY = None
 
     def create_keys(self):
         # Create the private and pulic keys for SPVClient.
@@ -35,7 +46,7 @@ class SPVClient:
     def associate_keys(self):
         # Associate the key pair created for SPVClient.
         private_key, public_key = self.create_keys()
-        self.private_key = private_key
+        self.PRIVATE_KEY = private_key
         self.PUBLIC_KEY = public_key
         return private_key, public_key
 
@@ -46,14 +57,15 @@ class SPVClient:
         return self.block_headers
 
     def create_transaction(self, receiver, amount, comment):
+        # Create new transaction and sign with private key
         new_txn = Transaction.new(sender=self.pubkey, receiver=receiver,
-                                amount=amount, privkey=self.privkey,
-                                comment=comment)
+                                amount=amount, comment=comment)
         new_txn.sign(self.private_key)
         return new_txn
 
     #TODO: Get balance from ledger in latest block
-    def request_balance(self):
+    #TODO: Update this part when ledger component is done!!
+    def check_balance(self):
         pass
 
 # Parsing arguments when entered via CLI
@@ -62,20 +74,21 @@ def parse_arguments(argv):
     list_of_miner_ip = []
     try:
         opts, args = getopt.getopt(
-            argv, "hp:im:w:", ["port=", "iminerfile=", "wallet="])
+            argv, "hp:i:w:", ["port=", "iminerfile=", "wallet="])
     # Only port and input is mandatory
     except getopt.GetoptError:
-        print('miner.py -p <port> -im <inputfile of list of IPs of other miners> -w <hashed public key of SPVClient>')
+        print('miner.py -p <port> -i <inputfile of list of IPs of other miners> -w <hashed public key of SPVClient>')
         sys.exit(2)
+
     for opt, arg in opts:
         if opt == '-h':
-            print('miner.py -p <port> -im <inputfile of list of IPs of other miners> -w <hashed public key of SPVClient>')
+            print('miner.py -p <port> -i <inputfile of list of IPs of other miners> -w <hashed public key of SPVClient>')
             sys.exit()
 
         elif opt in ("-p", "--port"):
             my_port = arg
 
-        elif opt in ("-im", "--iminerfile"):
+        elif opt in ("-i", "--iminerfile"):
             inputfile = arg
             f = open(inputfile, "r")
             for line in f:
@@ -85,3 +98,66 @@ def parse_arguments(argv):
             wallet_arg = arg
 
     return my_port, list_of_miner_ip, wallet_arg
+
+
+@app.route('/')
+def homepage():
+    return ""
+
+
+# For a single SPVClient
+@app.route('/login/<pub>/<priv>')
+def login(pub, priv):
+    # temporary
+    global user
+    user = SPVClient(privatekey=priv, publickey=pub)
+    return homepage()
+
+
+@app.route('/block_header', methods=['POST'])
+def new_block_header_network():
+    new_block_header = pickle.loads(request.get_data())
+    block_header_queue.put(new_block_header)
+    return ""
+
+
+# To broadcast to all miners when transaction is created
+@app.route('/createTransaction', methods=['POST'])
+def createTransaction():
+    if user is None:
+        return "Please login"
+
+    if request.headers['Content-Type'] == 'application/json':
+        # Receive data regarding transaction
+        json_received = request.json
+        transaction_data = json.loads(json_received)
+        print(transaction_data)
+
+        transaction = user.createTransaction(
+                        receivervk=transaction_data["recv"],
+                        amount=transaction_data["Amount"],
+                        comment=transaction_data["Comment"]
+                        )
+
+        # broadcast to all known miners
+        for miner in LIST_OF_MINER_IP:
+            # execute post request to broadcast transaction
+            broadcast_endpoint = miner + "/newTransaction"
+            requests.post(
+                url=broadcast_endpoint,
+                json=transaction.to_json()
+            )
+
+    else:
+        return 'wrong format of transaction sent'
+
+
+# To check the latest ledger frmo latest block.
+#TODO: Update this part when ledger component is done!!
+@app.route('/clientCheckBalance', methods=['GET'])
+def clientCheckBalance():
+    return user.check_balance("lol123")
+
+
+if __name__ == '__main__':
+    app.run(debug=True, use_reloader=False, port=MY_PORT)
