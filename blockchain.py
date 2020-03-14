@@ -246,18 +246,45 @@ class Ledger:
 
     def __init__(self, blockchain):
         self.blockchain = copy.deepcopy(blockchain)
+
         if self.blockchain.last_block is None:
             self.ledger = dict()
         else:
             self.ledger = self.blockchain.last_block.ledger
 
+    def update_ledger(self, transaction):
+        transaction = Transaction.from_json(transaction)
+        #add recipient to ledger if he doesn't exist
+        if self.ledger.get(transaction.receiver) is None:
+            self.ledger[transaction.receiver] = transaction.amount
+        else:
+            self.ledger[transaction.receiver] += transaction.amount
+
+        #don't have to check whether sender exists because it is done under verify_transaction
+        self.ledger[transaction.sender] -= transaction.amount
+      
+
+    def coinbase_transaction(self, public_key):
+        if self.ledger[public_key] is None:
+            self.ledger[public_key] = 100
+        else:
+            self.ledger[public_key] += 100
+
     def get_balance(self, public_key):
         return self.ledger[public_key]
     
-    def verify_transaction(self, new_transaction, transactions, prev_header_hash):
-
-        #change new transaction to Transaction object
+    #new_transaction, validated_transaction from create_merkel
+    #transactions: validated transactions in existing blocks
+    def verify_transaction(self, new_transaction, validated_transactions, transactions, prev_header_hash):
+        
+        #change transactions to Transaction objects
         new_transaction = Transaction.from_json(new_transaction)
+        for i, transaction in enumerate(validated_transactions):
+            validated_transactions[i] = Transaction.from_json(transaction)
+        
+        #check whether sender is in ledger
+        if self.ledger[new_transaction.sender] is None:
+            return False
 
         #check whether there is sufficient balance in sender's account
         if new_transaction.amount > self.get_balance(new_transaction.sender):
@@ -266,12 +293,12 @@ class Ledger:
         
         #check signature
         new_transaction.validate(new_transaction.sig)
-
-        #check for existing transaction in latest block
-        latest_merkel_tree = self.chain[self.blockchain.last_block()].transactions
-        if latest_merkel_tree.get_proof(new_transaction) != []:
-            print(f"this transaction appeared before. Transaction: {new_transaction}")
-            return False
+        
+        #check whether txid exists in validated transactions
+        for transaction in validated_transactions:
+            if new_transaction.txid == transaction.txid:
+                print(f"this transaction appeared before. Transaction: {transaction}")
+                return False
               
         self.blockchain.resolve()
         # obtain blocks in blockchain uptil block with previous header hash
@@ -292,16 +319,12 @@ class Ledger:
                     # transaction repeated
                     print(f"this transaction appeared before. Transaction: {transaction}")
                     return False
+
+        for transaction in transactions:
+            transaction.validate(transaction.sig)
         
         self.update_ledger(transaction)
         return True
-
-    def update_ledger(self, transaction):
-        transaction = Transaction.from_json(transaction)
-        self.ledger[transaction.sender] -= transaction.amount
-        self.ledger[transaction.receiver] += transaction.amount
-    
-
 
 # TODO Youngmin, so erm, it's a bit complex regarding the ledger
 # There has to be a copy of the ledger at every single block
@@ -322,9 +345,8 @@ def main():
     # Create blockchain
     blockchain = BlockChain([])
     
-
     #create ledger
-    ledger = Ledger()
+    ledger = Ledger(blockchain)
 
     # Genesis block
     merkletree = MerkleTree()
@@ -337,6 +359,7 @@ def main():
                       current_time, nonce, ledger)
         # If the add is successful, stop loop
         if blockchain.add(block):
+            block.ledger.coinbase_transaction("random public key ???")
             break
     print(blockchain)
 
@@ -370,14 +393,17 @@ def test_network_add():
     receiver = SigningKey.generate()
 
     # Genesis block
+    ledger = Ledger(blockchain)
+
     merkletree = MerkleTree()
     for i in range(1):
         merkletree.add(Transaction(sender, sender, 100).to_json())
+        ledger.coinbase_transaction(sender)
     merkletree.build()
     current_time = str(time.time())
     for nonce in range(10000000):
         block = Block(merkletree, None, merkletree.get_root(),
-                      current_time, nonce)
+                      current_time, nonce, ledger)
         # If the add is successful, stop loop
         if blockchain.validate(block):
             blockchain.network_add(block)

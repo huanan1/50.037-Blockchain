@@ -143,6 +143,9 @@ def create_sample_merkle():
 # Creates a merkle tree by compiling all of the transactions in transaction_queue
 # Sends the merkle tree to be made into a Block object
 def create_merkle(transaction_queue):
+    #### not sure how to get the blockchain object here
+    block = BlockChain.last_block()
+    ledger = block.ledger
     list_of_raw_transactions = []
     list_of_validated_transactions = []
     while not transaction_queue.empty():
@@ -150,15 +153,14 @@ def create_merkle(transaction_queue):
             Transaction.from_json(transaction_queue.get()))
     for transaction in list_of_raw_transactions:
         # TODO: check if transaction makes sense in the ledger
-        if Ledger.verify_transaction(transaction,transactions="not sure how to do this", prev_header_hash= "not sure how to do this"):
+        #### not sure how to get transactions and prev_header_hash
+        if ledger.verify_transaction(transaction, list_of_validated_transactions, block.transactions.leaf_set, block.previous_header_hash):
             list_of_validated_transactions.append(transaction)
-
-        # if True:
-        #     list_of_validated_transactions.append(transaction)
 
     merkletree = MerkleTree()
     # TODO: Add coinbase TX
     merkletree.add(Transaction(PUBLIC_KEY,PUBLIC_KEY,100))
+    ledger.coinbase_transaction(PUBLIC_KEY)
 
     for transaction in list_of_validated_transactions:
         merkletree.add(transaction.to_json())
