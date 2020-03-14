@@ -7,7 +7,7 @@ import copy
 import requests
 from transaction import Transaction
 import pickle
-
+import copy
 
 class Block:
     def __init__(self, transactions, previous_header_hash, hash_tree_root, timestamp, nonce):
@@ -78,7 +78,7 @@ class BlockChain:
         # check again that incoming block has prev hash and target < nonce (in case malicious miner publishing invalid blocks)
         check1 = self.validate(block)
         # check if transactions are valid (sender has enough money, and TXIDs have not appeared in the previous blocks)
-        check2 = self.verify_transactions(block.transactions.leaf_set, block.previous_header_hash)
+        check2 = self.verify_transactions(copy.deepcopy(block.transactions.leaf_set), block.previous_header_hash)
 
         if check1 and check2:
             header_hash = binascii.hexlify(block.header_hash()).decode()
@@ -148,7 +148,7 @@ class BlockChain:
 
     def rebroadcast_transactions(self, block):
         '''rebroadcast transactions from dropped blocks'''
-        transactions = block.transactions.leaf_set
+        transactions = copy.deepcopy(block.transactions.leaf_set)
         # convert transactions to Transaction objects
         # for i, transaction in enumerate(transactions):
         #     transactions[i] = Transaction.from_json(transaction)
