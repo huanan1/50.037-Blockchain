@@ -8,6 +8,7 @@ import requests
 from transaction import Transaction
 import pickle
 
+
 class Block:
     def __init__(self, transactions, previous_header_hash, hash_tree_root, timestamp, nonce):
         # Instantiates object from passed values
@@ -31,6 +32,13 @@ class Block:
         m.update(round1)
         return m.digest()
 
+class SPVBlock:
+    def __init__(self, block):
+        # Instantiates object from passed values
+        self.header_hash = block.header_hash()
+        self.prev_header_hash = block.prev_header_hash
+        # TODO add ledger
+        self.ledger = None
 
 class BlockChain:
     # chain is a dictionary, key is hash header, value is the header metadata of blocks
@@ -51,7 +59,7 @@ class BlockChain:
     network_cached_blocks = dict()
 
     def __init__(self, miner_ips):
-        self.miner_ips = miner_ips
+            self.miner_ips = miner_ips
 
     def network_add(self, block):
         # check for genesis block
@@ -137,7 +145,6 @@ class BlockChain:
         else:
             # If Genesis block, there is no need to check for the last hash value
             return block.header_hash() < self.TARGET
-
 
     def rebroadcast_transactions(self, block):
         '''rebroadcast transactions from dropped blocks'''
@@ -233,6 +240,7 @@ class BlockChain:
             reply += i[:10] + " -> "
         reply = reply[:-4]
         return reply
+
 
 # Test
 def main():

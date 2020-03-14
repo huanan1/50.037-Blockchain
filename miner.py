@@ -1,4 +1,4 @@
-from blockchain import BlockChain, Block
+from blockchain import BlockChain, Block, SPVBlock
 from transaction import Transaction
 from merkle_tree import MerkleTree
 import random
@@ -21,21 +21,22 @@ def parse_arguments(argv):
     color = ''
     selfish = False
     list_of_miner_ip = []
+    list_of_spv_ip = []
     mode = 1
     try:
         opts, args = getopt.getopt(
-            argv, "hp:i:c:m:s:", ["port=", "ifile=", "color=", "mode=","selfish="])
+            argv, "hp:im:is:c:m:s:", ["port=", "iminerfile=", "ispvfile=","color=", "mode=","selfish="])
     # Only port and input is mandatory
     except getopt.GetoptError:
-        print('miner.py -p <port> -i <inputfile of list of IPs of other miners> -c <color w|r|h|y|m|c> -m <mode 1/2> -s <1 if selfish miner>')
+        print('miner.py -p <port> -im <inputfile of list of IPs of other miners> -is <inputfile of list of IPs of SPV clients> -c <color w|r|h|y|m|c> -m <mode 1/2> -s <1 if selfish miner>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('miner.py -p <port> -i <inputfile of list of IPs of other miners> -c <color w|r|h|y|m|c> -m <mode 1/2> -s <1 if selfish miner>')
+            print('miner.py -p <port> -im <inputfile of list of IPs of other miners> -is <inputfile of list of IPs of SPV clients> -c <color w|r|h|y|m|c> -m <mode 1/2> -s <1 if selfish miner>')
             sys.exit()
         elif opt in ("-p", "--port"):
             my_port = arg
-        elif opt in ("-i", "--ifile"):
+        elif opt in ("-im", "--iminerfile"):
             inputfile = arg
             f = open(inputfile, "r")
             for line in f:
@@ -60,22 +61,26 @@ def parse_arguments(argv):
             mode_arg = arg
             if mode_arg == "2":
                 mode = 2
+        elif opt in ("-is", "--ispvfile"):
+            inputfile = arg
+            f = open(inputfile, "r")
+            for line in f:
+                list_of_spv_ip.append(line)
         elif opt in ("-s", "--selfish"):
             if arg=="1":
                 selfish = True
-    return my_port, list_of_miner_ip, color, mode, selfish
+    return my_port, list_of_miner_ip, list_of_spv_ip, color, mode, selfish
+
 
 # Get data from arguments
-MY_PORT, LIST_OF_MINER_IP, COLOR, MODE, SELFISH = parse_arguments(sys.argv[1:])
+MY_PORT, LIST_OF_MINER_IP, LIST_OF_SPV_IP, COLOR, MODE, SELFISH = parse_arguments(sys.argv[1:])
 # MY_IP will be a single string in the form of "127.0.0.1:5000"
 # LIST_OF_MINER_IP will be a list of strings in the form of ["127.0.0.1:5000","127.0.0.1:5001","127.0.0.1:5002"]
 # COLOR is color of text using colorama library
 # MODE is either 1 or 2, 1 is full details, 2 is shortform
 # SELFISH if True, this miner will be a selfish miner
 
-
-def get_miner_ips():
-    return LIST_OF_MINER_IP
+PUBLIC_KEY=None
 
 class Miner:
     def __init__(self, blockchain):
@@ -132,7 +137,7 @@ def create_sample_merkle():
 # have the latest ledger to be used here in the merkle_tree
 
 # There are 2 main checks to be done here
-# 1. The accounts involved have enough money to transact, depending on the ledger (dictionary - key(public address):value(amount left))
+# 1. The accounts involved have enough money to transact, depending on the ledger
 # 2. TXID (hash of transaction, not created yet) is not duplicated. I can't think of a way other than looking through EVERY transaction
 
 # Creates a merkle tree by compiling all of the transactions in transaction_queue
@@ -194,14 +199,25 @@ def start_mining(block_queue, transaction_queue):
                     if len(list_of_blocks_selfish) >=2:
                         mine_or_recv+="SENDING SELFISH BLOCKS\n"
                         for block in list_of_blocks_selfish:
-                            data = pickle.dumps(block, protocol=2)
+                            block_data = pickle.dumps(block, protocol=2)
+                            spv_block_data = pickle.dumps(SPVBlock(block), protocol=2)
                             for miner_ip in LIST_OF_MINER_IP:
                                 send_failed = True
                                 # Retry until peer receives, idk i think prof say ok right? assume all in stable network lel
                                 while send_failed:
                                     try:
                                         requests.post("http://"+miner_ip +
-                                                    "/block", data=data)
+                                                    "/block", data=block_data)
+                                        send_failed = False
+                                    except:
+                                        time.sleep(0.1)
+                            for spv_ip in LIST_OF_SPV_IP:
+                                send_failed = True
+                                # Retry until peer receives, idk i think prof say ok right? assume all in stable network lel
+                                while send_failed:
+                                    try:
+                                        requests.post("http://"+spv_ip +
+                                                    "/block_header", data=spv_block_data)
                                         send_failed = False
                                     except:
                                         time.sleep(0.1)
@@ -221,7 +237,6 @@ def start_mining(block_queue, transaction_queue):
         print(COLOR + "PORT: {}\n".format(MY_PORT) + mine_or_recv +
               (str(miner.blockchain) if MODE == 1 else str(miner.blockchain).split("~~~\n")[1]))
         # merkletree = create_merkle(transaction_queue)
-
 
 # Queue objects for passing stuff between processes
 block_queue = Queue()
