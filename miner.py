@@ -248,6 +248,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                     # TODO add rebroadcast of signal??
                     new_block = block_queue.get()
                     miner.network_block(new_block)
+                    mine_or_recv += binascii.hexlify(new_block.header_hash()).decode()
                     break
                 if not blockchain_request_queue.empty():
                     print("Received request of blockchain")

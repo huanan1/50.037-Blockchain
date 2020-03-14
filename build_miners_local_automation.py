@@ -39,7 +39,6 @@ list_of_miner_ips = []
 list_of_miner_wallets = []
 for line in f:
     single_line = line.strip().split("\t")
-    print(single_line)
     list_of_miner_ports.append(single_line[0])
     list_of_miner_ips.append(
         "127.0.0.1:" + single_line[0])
@@ -48,7 +47,6 @@ for line in f:
     else:
         list_of_miner_wallets.append("NO_WALLET")
 f.close()
-print(list_of_miner_ips, list_of_miner_wallets)
 
 # Reads LOCAL ports to use via miner_ports.txt
 f = open("spv_ports.txt", "r")
