@@ -107,7 +107,6 @@ class Miner:
         # resets after every block is added, both network and locally
 
     # Called when a new block is received by another miner
-    # TODO Huan An, here is where the add is called, network_add should verify the block
     def network_block(self, block):
         # Checks if the n
         if self.blockchain.network_add(block):
@@ -117,8 +116,14 @@ class Miner:
 # Random Merkletree
 def create_sample_merkle():
     merkletree = MerkleTree()
-    for i in range(100):
-        merkletree.add(random.randint(100, 1000))
+    from ecdsa import SigningKey
+    sender = SigningKey.generate()
+    receiver = SigningKey.generate()
+    for i in range(10):
+        if i == 0:
+            # coinbase
+            merkletree.add(Transaction(sender, receiver, 100).to_json())
+        merkletree.add(Transaction(sender, receiver, random.randint(100, 1000)).to_json())
     merkletree.build()
     return merkletree
 
@@ -156,7 +161,7 @@ def create_merkle(transaction_queue):
     merkletree.build()
     return merkletree
 
-blockchain = BlockChain()
+blockchain = BlockChain(LIST_OF_MINER_IP)
 def start_mining(block_queue, transaction_queue):
     merkletree = create_sample_merkle()
     miner = Miner(blockchain)
@@ -165,7 +170,7 @@ def start_mining(block_queue, transaction_queue):
     # Infinite loop
     while True:
         while True:
-            # Mines the once every round
+            # Mines the nonce every round
             miner_status = miner.mine(merkletree)
             mine_or_recv = ""
             # Check if that mine is successful
@@ -243,11 +248,12 @@ def new_block_network():
     block_queue.put(new_block)
     return ""
 
-@app.route('/transaction')
+
+@app.route('/transaction', methods=['POST'])
 def new_transaction_network():
-    # Needs to add a proper transaction object, currently thing will fail
-    # TODO add rebroadcast of signal??
-    transaction_queue.put("a")
+    new_transaction = pickle.loads(request.get_data())
+    transaction_queue.put(new_transaction)
+    return ""
 
 @app.route('/request_blockchain')
 def request_blockchain():
