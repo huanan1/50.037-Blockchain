@@ -226,7 +226,7 @@ class BlockChain:
             return self.chain[self.last_hash]
         else:
             return None
-
+            
     def __str__(self):
         reply = "-----------------\nThere are {} blocks in the blockchain\n\n".format(
             len(self.chain))
