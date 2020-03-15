@@ -1,7 +1,7 @@
 import ecdsa
 from ecdsa import SigningKey
 from transaction import Transaction
-from blockchain import BlockChain, Block
+from blockchain import BlockChain, Block, Ledger
 from merkle_tree import verify_proof
 from flask import Flask, request
 from multiprocessing import Process, Queue
@@ -58,15 +58,15 @@ class SPVClient:
 
     def create_transaction(self, receiver, amount, comment):
         # Create new transaction and sign with private key
-        new_txn = Transaction.new(sender=self.pubkey, receiver=receiver,
+        new_txn = Transaction.new(sender=self.PUBLIC_KEY, receiver=receiver,
                                 amount=amount, comment=comment)
-        new_txn.sign(self.private_key)
+        new_txn.sign(self.PRIVATE_KEY)
         return new_txn
 
-    #TODO: Get balance from ledger in latest block
-    #TODO: Update this part when ledger component is done!!
-    def check_balance(self, header_hash, prev_header_hash, ledger):
-        pass
+    #TODO: Is it this part need to accept prev header and current header?
+    def check_balance(self, ledger):
+        balance = getBalance(self.PUBLIC_KEY)
+        return balance
 
 # Parsing arguments when entered via CLI
 def parse_arguments(argv):
@@ -156,8 +156,8 @@ def createTransaction():
 #TODO: Update this part when ledger component is done!!
 @app.route('/clientCheckBalance', methods=['GET'])
 def clientCheckBalance():
-    return user.check_balance("lol123")
-
+    return user.check_balance(Ledger)
+    
 
 if __name__ == '__main__':
     app.run(debug=True, use_reloader=False, port=MY_PORT)
