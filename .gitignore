@@ -131,3 +131,6 @@ dmypy.json
 
 generated_miners/
 partner_miner_ip.txt
+partner_spv_ip.txt
+miner_ip.txt
+spv_ip.txt
