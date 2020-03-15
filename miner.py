@@ -190,8 +190,9 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
             mine_or_recv = ""
             # Check if that mine is successful
             if miner_status:
-                mine_or_recv = "Block MINED\n"
+                mine_or_recv = "Block MINED "
                 sending_block = blockchain.last_block()
+                mine_or_recv += binascii.hexlify(sending_block.header_hash()).decode()
                 # Grab the last block and send to network
                 # regular miner
                 if not SELFISH:
@@ -240,15 +241,18 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                         list_of_blocks_selfish=[]
                 break
             # Checks value of nonce, as checking queue every cycle makes it very laggy
-            if miner.nonce % 100000 == 0:
+            if miner.nonce % 10000== 0:
                 # Check if new blocks have been detected
+                block_queue_status_initial = block_queue.empty()
                 while not block_queue.empty():
-                    mine_or_recv = "Block RECEIVED\n"
+                    mine_or_recv = "Block RECEIVED "
                     # If detected, add new block to blockchain
                     # TODO add rebroadcast of signal??
                     new_block = block_queue.get()
                     miner.network_block(new_block)
-                    mine_or_recv += binascii.hexlify(new_block.header_hash()).decode()
+                    mine_or_recv += binascii.hexlify(new_block.header_hash()).decode() + " "
+                if not block_queue_status_initial:
+                    mine_or_recv += "\n"
                     break
                 if not blockchain_request_queue.empty():
                     print("Received request of blockchain")
@@ -341,5 +345,5 @@ def request_send_transaction(receiver_public_key, amount):
 if __name__ == '__main__':
     p = Process(target=start_mining, args=(block_queue, transaction_queue,blockchain_request_queue, blockchain_reply_queue,))
     p.start()
-    app.run(debug=True, use_reloader=False, port=MY_PORT)
+    app.run(host='0.0.0.0', debug=True, use_reloader=False, port=MY_PORT)
     p.join()
