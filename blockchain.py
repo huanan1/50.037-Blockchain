@@ -7,7 +7,7 @@ import copy
 import requests
 from transaction import Transaction
 import pickle
-
+import copy
 
 class Block:
     def __init__(self, transactions, previous_header_hash, hash_tree_root, timestamp, nonce):
@@ -62,6 +62,8 @@ class BlockChain:
             self.miner_ips = miner_ips
 
     def network_add(self, block):
+        # self.chain[binascii.hexlify(block.header_hash()).decode()] = block
+        # return True
         # check for genesis block
         if block.previous_header_hash is None:
             # check that number of transactions is 1 in genesis block
@@ -78,27 +80,45 @@ class BlockChain:
         # check again that incoming block has prev hash and target < nonce (in case malicious miner publishing invalid blocks)
         check1 = self.validate(block)
         # check if transactions are valid (sender has enough money, and TXIDs have not appeared in the previous blocks)
-        check2 = self.verify_transactions(block.transactions.leaf_set, block.previous_header_hash)
-
+        check2 = self.verify_transactions(copy.deepcopy(block.transactions.leaf_set), block.previous_header_hash)
+        print("Before", self.network_cached_blocks)
         if check1 and check2:
             header_hash = binascii.hexlify(block.header_hash()).decode()
             self.chain[header_hash] = block
             # check rejected blocks
-            if header_hash in self.network_cached_blocks:
-                next_block = self.network_cached_blocks.get(header_hash)
-                if self.network_add(next_block):
+            time.sleep(0.05)
+            
+            for cached_header in self.network_cached_blocks:
+                next_block = self.network_cached_blocks[cached_header]
+                print("ISSIIT TRUE?", self.network_add(copy.deepcopy(next_block)))
+                if self.network_add(copy.deepcopy(next_block)):
                     # delete from rejected list if block added to blockchain
-                    del self.network_cached_blocks[header_hash]
+                    del self.network_cached_blocks[cached_header]
+                    print("After", self.network_cached_blocks)
             return True
         else:
-            self.network_cached_blocks[binascii.hexlify(block.header_hash()).decode()] = block
+            print(check1, check2)
+            print("ERROR_ERROR", binascii.hexlify(block.header_hash()).decode(), self.chain)
+            self.network_cached_blocks[binascii.hexlify(block.header_hash()).decode()] = copy.deepcopy(block)
             return False
 
     def verify_transactions(self, transactions, prev_header_hash):
         self.resolve() # ensure cleaned_keys updated
         # obtain blocks in blockchain uptil block with previous header hash
-        chain_uptil_prev = self.cleaned_keys[:self.cleaned_keys.index(prev_header_hash)+1]
-        
+        prev_hash_temp = prev_header_hash
+        chain_uptil_prev = []
+        while True:
+            try:
+                prev_hash_temp = self.chain[prev_hash_temp].previous_header_hash
+            except KeyError:
+                return False
+            if prev_hash_temp == None:
+                break
+            chain_uptil_prev.append(prev_hash_temp)
+        # try:
+        #     chain_uptil_prev = self.cleaned_keys[:self.cleaned_keys.index(prev_header_hash)+1]
+        # except:
+        #     return False
         # convert transactions to Transaction objects
         for i, transaction in enumerate(transactions):
             transactions[i] = Transaction.from_json(transaction)
@@ -148,10 +168,10 @@ class BlockChain:
 
     def rebroadcast_transactions(self, block):
         '''rebroadcast transactions from dropped blocks'''
-        transactions = block.transactions.leaf_set
+        transactions = copy.deepcopy(block.transactions.leaf_set)
         # convert transactions to Transaction objects
-        for i, transaction in enumerate(transactions):
-            transactions[i] = Transaction.from_json(transaction)
+        # for i, transaction in enumerate(transactions):
+        #     transactions[i] = Transaction.from_json(transaction)
 
         not_sent = True
         for miner_ip in self.miner_ips:
@@ -191,12 +211,12 @@ class BlockChain:
             except IndexError:
                 self.last_hash = None
 
-            dropped_blocks = self.find_dropped_blocks()
-            for _, block in dropped_blocks.items():
-                rebroadcasted = False
-                while not rebroadcasted:
-                    # retry rebroadcasting until it succeeds
-                    rebroadcasted = self.rebroadcast_transactions(block)
+            # dropped_blocks = self.find_dropped_blocks()
+            # for _, block in dropped_blocks.items():
+            #     rebroadcasted = False
+            #     while not rebroadcasted:
+            #         # retry rebroadcasting until it succeeds
+            #         rebroadcasted = self.rebroadcast_transactions(block)
                 
 
     def resolve_DP(self, hash_check, score, cleared_hashes):
@@ -226,7 +246,7 @@ class BlockChain:
             return self.chain[self.last_hash]
         else:
             return None
-
+            
     def __str__(self):
         reply = "-----------------\nThere are {} blocks in the blockchain\n\n".format(
             len(self.chain))
