@@ -241,7 +241,6 @@ def start_mining(block_queue, transaction_queue):
 # Queue objects for passing stuff between processes
 block_queue = Queue()
 transaction_queue = Queue()
-transaction_queue = Queue()
 
 @app.route('/block', methods=['POST'])
 def new_block_network():
