@@ -68,11 +68,11 @@ class BlockChain:
         check1 = self.validate(block)
         # check if transactions are valid (sender has enough money, and TXIDs have not appeared in the previous blocks)
         check2 = self.verify_transactions(copy.deepcopy(block.transactions.leaf_set), block.previous_header_hash)
+        print(check1, check2)
+        # check2 = True
         return check1 and check2
 
     def network_add(self, block):
-        # self.chain[binascii.hexlify(block.header_hash()).decode()] = block
-        # return True
         # check for genesis block
         if block.previous_header_hash is None:
             # check that number of transactions is 1 in genesis block
@@ -97,6 +97,7 @@ class BlockChain:
         else:
             print("Saved in cache: ", binascii.hexlify(block.header_hash()).decode(), self.chain)
             self.network_cached_blocks[binascii.hexlify(block.header_hash()).decode()] = copy.deepcopy(block)
+            print(block.previous_header_hash)
             return False
     
     def network_add_cached_blocks(self,cached_blocks):
@@ -111,28 +112,24 @@ class BlockChain:
 
 
     def verify_transactions(self, transactions, prev_header_hash):
-        self.resolve() # ensure cleaned_keys updated
         # obtain blocks in blockchain uptil block with previous header hash
         prev_hash_temp = prev_header_hash
-        chain_uptil_prev = []
+        chain_uptil_prev = [prev_header_hash]
         while True:
             try:
                 prev_hash_temp = self.chain[prev_hash_temp].previous_header_hash
+                chain_uptil_prev.append(prev_hash_temp)
             except KeyError:
+                print(f"there's no such hash: {prev_hash_temp} in the chain")
                 return False
             if prev_hash_temp == None:
                 break
-            chain_uptil_prev.append(prev_hash_temp)
-        # try:
-        #     chain_uptil_prev = self.cleaned_keys[:self.cleaned_keys.index(prev_header_hash)+1]
-        # except:
-        #     return False
-        # convert transactions to Transaction objects
         for i, transaction in enumerate(transactions):
             transactions[i] = Transaction.from_json(transaction)
 
         # check coinbase transaction amount
         if transactions[0].amount != 100:
+            print("the amt in the coinbase transaction is not 100")
             return False
         
         # loop through all previous blocks
@@ -149,9 +146,12 @@ class BlockChain:
         
         for transaction in transactions:
             # check if transaction was really sent by the sender
-            transaction.validate(transaction.sig)
+            try:
+                transaction.validate(transaction.sig)
+            except AssertionError:
+                print("sender's signature is not valid")
             # check if sender has enough money
-            # if Ledger.get_balance(transaction.sender) - transaction.amount < 0:
+            # if ledger.get_balance(transaction.sender) - transaction.amount < 0:
                 # return False
         return True
 
@@ -177,9 +177,6 @@ class BlockChain:
     def rebroadcast_transactions(self, block):
         '''rebroadcast transactions from dropped blocks'''
         transactions = copy.deepcopy(block.transactions.leaf_set)
-        # convert transactions to Transaction objects
-        # for i, transaction in enumerate(transactions):
-        #     transactions[i] = Transaction.from_json(transaction)
 
         not_sent = True
         for miner_ip in self.miner_ips:
@@ -219,12 +216,12 @@ class BlockChain:
             except IndexError:
                 self.last_hash = None
 
-            # dropped_blocks = self.find_dropped_blocks()
-            # for _, block in dropped_blocks.items():
-            #     rebroadcasted = False
-            #     while not rebroadcasted:
-            #         # retry rebroadcasting until it succeeds
-            #         rebroadcasted = self.rebroadcast_transactions(block)
+            dropped_blocks = self.find_dropped_blocks()
+            for _, block in dropped_blocks.items():
+                rebroadcasted = False
+                while not rebroadcasted:
+                    # retry rebroadcasting until it succeeds
+                    rebroadcasted = self.rebroadcast_transactions(block)
                 
 
     def resolve_DP(self, hash_check, score, cleared_hashes):

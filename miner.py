@@ -242,7 +242,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                         list_of_blocks_selfish=[]
                 break
             # Checks value of nonce, as checking queue every cycle makes it very laggy
-            if miner.nonce % 10000== 0:
+            if miner.nonce % 100 == 0:
                 # Check if new blocks have been detected
                 block_queue_status_initial = block_queue.empty()
                 while not block_queue.empty():
