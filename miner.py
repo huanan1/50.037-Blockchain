@@ -88,7 +88,9 @@ class Miner:
         self.nonce = 0
         self.current_time = str(time.time())
 
-    def mine(self, merkletree):
+    #can i pass ledger as an argument?
+    def mine(self, merkletree, ledger):
+        #is this the new block after create_merkel? how to add ledger from here
         block = Block(merkletree, self.blockchain.last_hash,
                       merkletree.get_root(), self.current_time, self.nonce)
         if self.blockchain.add(block):
@@ -153,31 +155,33 @@ def create_merkle(transaction_queue):
             Transaction.from_json(transaction_queue.get()))
     for transaction in list_of_raw_transactions:
         # TODO: check if transaction makes sense in the ledger
-        #### not sure how to get transactions and prev_header_hash
         if ledger.verify_transaction(transaction, list_of_validated_transactions, block.transactions.leaf_set, block.previous_header_hash):
             list_of_validated_transactions.append(transaction)
 
     merkletree = MerkleTree()
     # TODO: Add coinbase TX
-    merkletree.add(Transaction(PUBLIC_KEY,PUBLIC_KEY,100))
+    merkletree.add(Transaction(PUBLIC_KEY,PUBLIC_KEY,100).to_json())
     ledger.coinbase_transaction(PUBLIC_KEY)
 
     for transaction in list_of_validated_transactions:
         merkletree.add(transaction.to_json())
     merkletree.build()
-    return merkletree
+    return merkletree, ledger
 
 blockchain = BlockChain(LIST_OF_MINER_IP)
 def start_mining(block_queue, transaction_queue):
-    merkletree = create_sample_merkle()
+   
     miner = Miner(blockchain)
     miner_status = False
     list_of_blocks_selfish = []
     # Infinite loop
     while True:
+        #merkletree, ledger = create_sample_merkle()
+        merkletree, ledger = create_merkel(transaction_queue)
+
         while True:
             # Mines the nonce every round
-            miner_status = miner.mine(merkletree)
+            miner_status = miner.mine(merkletree, ledger)
             mine_or_recv = ""
             # Check if that mine is successful
             if miner_status:

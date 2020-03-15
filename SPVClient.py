@@ -54,6 +54,8 @@ class SPVClient:
 
     #TODO: Get balance from ledger in latest block
     def request_balance(self):
+        
+    #ledger.get_balance(public_key)
         pass
 
 # Parsing arguments when entered via CLI

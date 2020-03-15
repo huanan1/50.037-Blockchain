@@ -244,18 +244,19 @@ class BlockChain:
 
 class Ledger:
 
-    def __init__(self, blockchain):
-        self.blockchain = copy.deepcopy(blockchain)
+    def __init__(self):
+        # self.blockchain = copy.deepcopy(blockchain)
 
-        if self.blockchain.last_block is None:
-            self.ledger = dict()
-        else:
-            self.ledger = self.blockchain.last_block.ledger
+        # if self.blockchain.last_block is None:
+        #     self.ledger = dict()
+        # else:
+        #     self.ledger = self.blockchain.last_block().ledger
+        self.ledger = dict()
 
     def update_ledger(self, transaction):
         transaction = Transaction.from_json(transaction)
         #add recipient to ledger if he doesn't exist
-        if self.ledger.get(transaction.receiver) is None:
+        if transaction.receiver not in self.ledger:
             self.ledger[transaction.receiver] = transaction.amount
         else:
             self.ledger[transaction.receiver] += transaction.amount
@@ -265,7 +266,7 @@ class Ledger:
       
 
     def coinbase_transaction(self, public_key):
-        if self.ledger[public_key] is None:
+        if public_key not in self.ledger:
             self.ledger[public_key] = 100
         else:
             self.ledger[public_key] += 100
@@ -283,7 +284,7 @@ class Ledger:
             validated_transactions[i] = Transaction.from_json(transaction)
         
         #check whether sender is in ledger
-        if self.ledger[new_transaction.sender] is None:
+        if new_transaction.sender not in self.ledger:
             return False
 
         #check whether there is sufficient balance in sender's account
@@ -346,7 +347,7 @@ def main():
     blockchain = BlockChain([])
     
     #create ledger
-    ledger = Ledger(blockchain)
+    ledger = Ledger()
 
     # Genesis block
     merkletree = MerkleTree()
@@ -359,7 +360,7 @@ def main():
                       current_time, nonce, ledger)
         # If the add is successful, stop loop
         if blockchain.add(block):
-            block.ledger.coinbase_transaction("random public key ???")
+            # block.ledger.coinbase_transaction("random public key ???")
             break
     print(blockchain)
 
@@ -393,12 +394,12 @@ def test_network_add():
     receiver = SigningKey.generate()
 
     # Genesis block
-    ledger = Ledger(blockchain)
+    ledger = Ledger()
 
     merkletree = MerkleTree()
     for i in range(1):
         merkletree.add(Transaction(sender, sender, 100).to_json())
-        ledger.coinbase_transaction(sender)
+        ledger.coinbase_transaction(sender.to_string())
     merkletree.build()
     current_time = str(time.time())
     for nonce in range(10000000):
