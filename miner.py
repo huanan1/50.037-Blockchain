@@ -32,7 +32,7 @@ def parse_arguments(argv):
     private_key = None
     try:
         opts, args = getopt.getopt(
-            argv, "hp:m:s:c:d:s:w:", ["port=", "iminerfile=", "ispvfile=","color=", "description=","selfish=", "wallet="])
+            argv, "hp:m:s:c:d:f:w:", ["port=", "iminerfile=", "ispvfile=","color=", "description=","selfish=", "wallet="])
     # Only port and input is mandatory
     except getopt.GetoptError:
         print('miner.py -p <port> -m <inputfile of list of IPs of other miners> -s <inputfile of list of IPs of SPV clients> -c <color w|r|h|y|m|c> -d <description 1/2> -s <1 if selfish miner>')
@@ -49,6 +49,7 @@ def parse_arguments(argv):
             for line in f:
                 list_of_miner_ip.append(line.strip())
         elif opt in ("-s", "--ispvfile"):
+            print("NO")
             inputfile = arg
             f = open(inputfile, "r")
             for line in f:
@@ -73,7 +74,7 @@ def parse_arguments(argv):
             mode_arg = arg
             if mode_arg == "2":
                 mode = 2
-        elif opt in ("-s", "--selfish"):
+        elif opt in ("-f", "--selfish"):
             if arg=="1":
                 selfish = True
         elif opt in ("-w", "--wallet"):

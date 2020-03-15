@@ -36,7 +36,7 @@ class SPVBlock:
     def __init__(self, block):
         # Instantiates object from passed values
         self.header_hash = block.header_hash()
-        self.prev_header_hash = block.prev_header_hash
+        self.prev_header_hash = block.previous_header_hash
         # TODO add ledger
         self.ledger = None
 
