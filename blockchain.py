@@ -40,6 +40,8 @@ class SPVBlock:
         # TODO add ledger
         self.ledger = None
 
+
+
 class BlockChain:
     # chain is a dictionary, key is hash header, value is the header metadata of blocks
     chain = dict()
@@ -61,6 +63,13 @@ class BlockChain:
     def __init__(self, miner_ips):
             self.miner_ips = miner_ips
 
+    def network_block_validate(self, block):
+        # check again that incoming block has prev hash and target < nonce (in case malicious miner publishing invalid blocks)
+        check1 = self.validate(block)
+        # check if transactions are valid (sender has enough money, and TXIDs have not appeared in the previous blocks)
+        check2 = self.verify_transactions(copy.deepcopy(block.transactions.leaf_set), block.previous_header_hash)
+        return check1 and check2
+
     def network_add(self, block):
         # self.chain[binascii.hexlify(block.header_hash()).decode()] = block
         # return True
@@ -77,30 +86,29 @@ class BlockChain:
             self.chain[binascii.hexlify(block.header_hash()).decode()] = block
             return True
 
-        # check again that incoming block has prev hash and target < nonce (in case malicious miner publishing invalid blocks)
-        check1 = self.validate(block)
-        # check if transactions are valid (sender has enough money, and TXIDs have not appeared in the previous blocks)
-        check2 = self.verify_transactions(copy.deepcopy(block.transactions.leaf_set), block.previous_header_hash)
-        print("Before", self.network_cached_blocks)
-        if check1 and check2:
+        # print("Before", self.network_cached_blocks)
+        if self.network_block_validate(block):
             header_hash = binascii.hexlify(block.header_hash()).decode()
             self.chain[header_hash] = block
             # check rejected blocks
             time.sleep(0.05)
-            
-            for cached_header in self.network_cached_blocks:
-                next_block = self.network_cached_blocks[cached_header]
-                print("ISSIIT TRUE?", self.network_add(copy.deepcopy(next_block)))
-                if self.network_add(copy.deepcopy(next_block)):
-                    # delete from rejected list if block added to blockchain
-                    del self.network_cached_blocks[cached_header]
-                    print("After", self.network_cached_blocks)
+            self.network_add_cached_blocks(copy.deepcopy(self.network_cached_blocks))
             return True
         else:
-            print(check1, check2)
-            print("ERROR_ERROR", binascii.hexlify(block.header_hash()).decode(), self.chain)
+            print("Saved in cache: ", binascii.hexlify(block.header_hash()).decode(), self.chain)
             self.network_cached_blocks[binascii.hexlify(block.header_hash()).decode()] = copy.deepcopy(block)
             return False
+    
+    def network_add_cached_blocks(self,cached_blocks):
+        cached_blocks_refreshed = copy.deepcopy(cached_blocks)
+        for cached_header in cached_blocks:
+                next_block = cached_blocks[cached_header]
+                if self.network_block_validate(next_block):
+                    self.chain[cached_header] = copy.deepcopy(next_block)
+                    del cached_blocks_refreshed[cached_header]
+                    self.network_add_cached_blocks(cached_blocks_refreshed)
+        # return cached_blocks_refreshed
+
 
     def verify_transactions(self, transactions, prev_header_hash):
         self.resolve() # ensure cleaned_keys updated

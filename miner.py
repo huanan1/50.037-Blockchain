@@ -242,7 +242,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
             # Checks value of nonce, as checking queue every cycle makes it very laggy
             if miner.nonce % 100000 == 0:
                 # Check if new blocks have been detected
-                if not block_queue.empty():
+                while not block_queue.empty():
                     mine_or_recv = "Block RECEIVED\n"
                     # If detected, add new block to blockchain
                     # TODO add rebroadcast of signal??
