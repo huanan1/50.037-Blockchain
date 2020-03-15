@@ -246,7 +246,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                 # Check if new blocks have been detected
                 block_queue_status_initial = block_queue.empty()
                 while not block_queue.empty():
-                    mine_or_recv = "Block RECEIVED "
+                    mine_or_recv += "Block RECEIVED "
                     # If detected, add new block to blockchain
                     # TODO add rebroadcast of signal??
                     new_block = block_queue.get()

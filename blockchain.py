@@ -69,7 +69,6 @@ class BlockChain:
         # check if transactions are valid (sender has enough money, and TXIDs have not appeared in the previous blocks)
         check2 = self.verify_transactions(copy.deepcopy(block.transactions.leaf_set), block.previous_header_hash)
         print(check1, check2)
-        # check2 = True
         return check1 and check2
 
     def network_add(self, block):
@@ -86,25 +85,28 @@ class BlockChain:
             self.chain[binascii.hexlify(block.header_hash()).decode()] = block
             return True
 
-        # print("Before", self.network_cached_blocks)
         if self.network_block_validate(block):
             header_hash = binascii.hexlify(block.header_hash()).decode()
             self.chain[header_hash] = block
             # check rejected blocks
             time.sleep(0.05)
+            print("\nlooking through cached blocks...")
             self.network_add_cached_blocks(copy.deepcopy(self.network_cached_blocks))
+            print("finished looking through cached blocks")
             return True
         else:
-            print("Saved in cache: ", binascii.hexlify(block.header_hash()).decode(), self.chain)
+            print("\nSaved in cache: ", binascii.hexlify(block.header_hash()).decode(), self.chain)
             self.network_cached_blocks[binascii.hexlify(block.header_hash()).decode()] = copy.deepcopy(block)
             print(block.previous_header_hash)
             return False
     
     def network_add_cached_blocks(self,cached_blocks):
+        '''search through cached blocks to see if any can be added to the blockchain'''
         cached_blocks_refreshed = copy.deepcopy(cached_blocks)
         for cached_header in cached_blocks:
                 next_block = cached_blocks[cached_header]
                 if self.network_block_validate(next_block):
+                    print(f"adding block: {binascii.hexlify(next_block.header_hash()).decode()} from cache to chain")
                     self.chain[cached_header] = copy.deepcopy(next_block)
                     del cached_blocks_refreshed[cached_header]
                     self.network_add_cached_blocks(cached_blocks_refreshed)
