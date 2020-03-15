@@ -90,7 +90,7 @@ class BlockChain:
             self.chain[header_hash] = block
             # check rejected blocks
             time.sleep(0.05)
-            print("\nlooking through cached blocks...")
+            print("looking through cached blocks...")
             self.network_add_cached_blocks(self.network_cached_blocks)
             print("finished looking through cached blocks")
             return True
@@ -112,10 +112,10 @@ class BlockChain:
                     runAgain = True
 
         for header in added:
-            del cached_blocks[header]
+            del self.network_cached_blocks[header]
 
         if runAgain == True:
-            self.network_add_cached_blocks(cached_blocks)
+            self.network_add_cached_blocks(self.network_cached_blocks)
 
     def verify_transactions(self, transactions, prev_header_hash):
         # obtain blocks in blockchain uptil block with previous header hash
