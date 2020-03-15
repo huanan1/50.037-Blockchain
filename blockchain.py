@@ -103,19 +103,25 @@ class BlockChain:
     def network_add_cached_blocks(self,cached_blocks):
         '''search through cached blocks to see if any can be added to the blockchain'''
         added = []
-        runAgain = False
-        for cached_header in cached_blocks:
+        runAgain = True
+        while runAgain:
+            runAgain = False
+            # delete all added blocks and empty list
+            for header in added:
+                del cached_blocks[header]
+                # print(f"here's the cache:{cached_blocks} after deleting header:{header}")
+            added = []
+            for cached_header in cached_blocks:
                 next_block = cached_blocks[cached_header]
                 if self.network_block_validate(next_block):
                     print(f"adding block: {binascii.hexlify(next_block.header_hash()).decode()} from cache to chain")
                     self.chain[cached_header] = copy.deepcopy(next_block)
+                    added.append(cached_header)
                     runAgain = True
+                    break
+        
+        self.network_cached_blocks = copy.deepcopy(cached_blocks)
 
-        for header in added:
-            del self.network_cached_blocks[header]
-
-        if runAgain == True:
-            self.network_add_cached_blocks(self.network_cached_blocks)
 
     def verify_transactions(self, transactions, prev_header_hash):
         # obtain blocks in blockchain uptil block with previous header hash
