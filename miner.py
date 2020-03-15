@@ -32,7 +32,7 @@ def parse_arguments(argv):
     private_key = None
     try:
         opts, args = getopt.getopt(
-            argv, "hp:m:s:c:d:s:w:", ["port=", "iminerfile=", "ispvfile=","color=", "description=","selfish=", "wallet="])
+            argv, "hp:m:s:c:d:f:w:", ["port=", "iminerfile=", "ispvfile=","color=", "description=","selfish=", "wallet="])
     # Only port and input is mandatory
     except getopt.GetoptError:
         print('miner.py -p <port> -m <inputfile of list of IPs of other miners> -s <inputfile of list of IPs of SPV clients> -c <color w|r|h|y|m|c> -d <description 1/2> -s <1 if selfish miner>')
@@ -49,6 +49,7 @@ def parse_arguments(argv):
             for line in f:
                 list_of_miner_ip.append(line.strip())
         elif opt in ("-s", "--ispvfile"):
+            print("NO")
             inputfile = arg
             f = open(inputfile, "r")
             for line in f:
@@ -73,7 +74,7 @@ def parse_arguments(argv):
             mode_arg = arg
             if mode_arg == "2":
                 mode = 2
-        elif opt in ("-s", "--selfish"):
+        elif opt in ("-f", "--selfish"):
             if arg=="1":
                 selfish = True
         elif opt in ("-w", "--wallet"):
@@ -190,8 +191,9 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
             mine_or_recv = ""
             # Check if that mine is successful
             if miner_status:
-                mine_or_recv = "Block MINED\n"
+                mine_or_recv = "Block MINED "
                 sending_block = blockchain.last_block()
+                mine_or_recv += binascii.hexlify(sending_block.header_hash()).decode()
                 # Grab the last block and send to network
                 # regular miner
                 if not SELFISH:
@@ -240,15 +242,18 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                         list_of_blocks_selfish=[]
                 break
             # Checks value of nonce, as checking queue every cycle makes it very laggy
-            if miner.nonce % 100000 == 0:
+            if miner.nonce % 100 == 0:
                 # Check if new blocks have been detected
-                if not block_queue.empty():
-                    mine_or_recv = "Block RECEIVED\n"
+                block_queue_status_initial = block_queue.empty()
+                while not block_queue.empty():
+                    mine_or_recv = "Block RECEIVED "
                     # If detected, add new block to blockchain
                     # TODO add rebroadcast of signal??
                     new_block = block_queue.get()
                     miner.network_block(new_block)
-                    mine_or_recv += binascii.hexlify(new_block.header_hash()).decode()
+                    mine_or_recv += binascii.hexlify(new_block.header_hash()).decode() + " "
+                if not block_queue_status_initial:
+                    mine_or_recv += "\n"
                     break
                 if not blockchain_request_queue.empty():
                     print("Received request of blockchain")
@@ -353,5 +358,5 @@ def request_send_transaction(receiver_public_key, amount):
 if __name__ == '__main__':
     p = Process(target=start_mining, args=(block_queue, transaction_queue,blockchain_request_queue, blockchain_reply_queue,))
     p.start()
-    app.run(debug=True, use_reloader=False, port=MY_PORT)
+    app.run(host='0.0.0.0', debug=True, use_reloader=False, port=MY_PORT)
     p.join()
