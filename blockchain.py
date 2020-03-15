@@ -113,8 +113,8 @@ class BlockChain:
             except KeyError:
                 return False
             if prev_hash_temp == None:
-                break
-            chain_uptil_prev.append(prev_hash_temp)
+                chain_uptil_prev.append(prev_hash_temp)
+            break
         # try:
         #     chain_uptil_prev = self.cleaned_keys[:self.cleaned_keys.index(prev_header_hash)+1]
         # except:

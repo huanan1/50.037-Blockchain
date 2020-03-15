@@ -133,7 +133,7 @@ def createTransaction():
         transaction_data = json.loads(json_received)
         print(transaction_data)
 
-        transaction = user.createTransaction(
+        transaction = user.create_transaction(
                         receivervk=transaction_data["recv"],
                         amount=transaction_data["Amount"],
                         comment=transaction_data["Comment"]
@@ -152,8 +152,7 @@ def createTransaction():
         return 'wrong format of transaction sent'
 
 
-# To check the latest ledger frmo latest block.
-#TODO: Update this part when ledger component is done!!
+# To check the latest ledger from latest block.
 @app.route('/clientCheckBalance', methods=['GET'])
 def clientCheckBalance():
     return user.check_balance(Ledger)

@@ -335,8 +335,20 @@ def request_account_balance(public_key):
 @app.route('/send_transaction?receiver=<receiver_public_key>&amount=<amount>')
 def request_send_transaction(receiver_public_key, amount):
     # TODO Send to all miners
+    transaction_dictionary = dict()
+    transaction_dictionary["receiver_public_key"] = Transaction.receiver
+    transaction_dictionary["amount"]  = Transaction.amount
+    # broadcast to all known miners
+    for miner in LIST_OF_MINER_IP:
+        # execute post request to broadcast transaction
+        broadcast_endpoint = miner + "/transaction"
+        requests.post(
+            url=broadcast_endpoint,
+            json=jsonify(transaction_dictionary)
+        )
     # TODO Add to own transaction queue
-    return None
+    transaction_queue.put(transaction_dictionary)
+    
 
 if __name__ == '__main__':
     p = Process(target=start_mining, args=(block_queue, transaction_queue,blockchain_request_queue, blockchain_reply_queue,))
