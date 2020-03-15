@@ -26,20 +26,21 @@ def parse_arguments(argv):
     outputfile = ''
     color = ''
     selfish = False
+    double_spending_attack = False
     list_of_miner_ip = []
     list_of_spv_ip = []
     mode = 1
     private_key = None
     try:
         opts, args = getopt.getopt(
-            argv, "hp:m:s:c:d:f:w:", ["port=", "iminerfile=", "ispvfile=","color=", "description=","selfish=", "wallet="])
+            argv, "hp:m:s:c:d:f:w:a:", ["port=", "iminerfile=", "ispvfile=","color=", "description=","selfish=", "wallet=","double_spending_attack="])
     # Only port and input is mandatory
     except getopt.GetoptError:
-        print('miner.py -p <port> -m <inputfile of list of IPs of other miners> -s <inputfile of list of IPs of SPV clients> -c <color w|r|h|y|m|c> -d <description 1/2> -s <1 if selfish miner>')
+        print('miner.py -p <port> -m <inputfile of list of IPs of other miners> -s <inputfile of list of IPs of SPV clients> -c <color w|r|h|y|m|c> -d <description 1/2> -s <1 if selfish miner> -a <1 if demo double-spending attack>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('miner.py -p <port> -m <inputfile of list of IPs of other miners> -s <inputfile of list of IPs of SPV clients> -c <color w|r|h|y|m|c> -d <description 1/2> -s <1 if selfish miner>')
+            print('miner.py -p <port> -m <inputfile of list of IPs of other miners> -s <inputfile of list of IPs of SPV clients> -c <color w|r|h|y|m|c> -d <description 1/2> -s <1 if selfish miner> -a <1 if demo double-spending attack>')
             sys.exit()
         elif opt in ("-p", "--port"):
             my_port = arg
@@ -80,11 +81,14 @@ def parse_arguments(argv):
         elif opt in ("-w", "--wallet"):
             if arg != "NO_WALLET":
                 private_key = arg
-    return my_port, list_of_miner_ip, list_of_spv_ip, color, mode, selfish, private_key
+        elif opt in ("-a", "--attack"):
+            if arg=="1":
+                double_spending_attack = True
+    return my_port, list_of_miner_ip, list_of_spv_ip, color, mode, selfish, private_key, double_spending_attack
 
 
 # Get data from arguments
-MY_PORT, LIST_OF_MINER_IP, LIST_OF_SPV_IP, COLOR, MODE, SELFISH, PRIVATE_KEY = parse_arguments(sys.argv[1:])
+MY_PORT, LIST_OF_MINER_IP, LIST_OF_SPV_IP, COLOR, MODE, SELFISH, PRIVATE_KEY, DOUBLE_SPENDING_ATTACK = parse_arguments(sys.argv[1:])
 # MY_IP will be a single string in the form of "127.0.0.1:5000"
 # LIST_OF_MINER_IP will be a list of strings in the form of ["127.0.0.1:5000","127.0.0.1:5001","127.0.0.1:5002"]
 # COLOR is color of text using colorama library
@@ -194,9 +198,22 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                 mine_or_recv = "Block MINED "
                 sending_block = blockchain.last_block()
                 mine_or_recv += binascii.hexlify(sending_block.header_hash()).decode()
+                
+                if DOUBLE_SPENDING_ATTACK:
+                    data = pickle.dumps(sending_block, protocol=2)
+                    for miner_ip in LIST_OF_MINER_IP:
+                        send_failed = True
+                        while send_failed:
+                            try:
+                                requests.post("http://"+miner_ip +
+                                            "/block", data=data)
+                                send_failed = False
+                            except:
+                                time.sleep(0.2)                    
+
                 # Grab the last block and send to network
                 # regular miner
-                if not SELFISH:
+                elif not SELFISH:
                     data = pickle.dumps(sending_block, protocol=2)
                     for miner_ip in LIST_OF_MINER_IP:
                         send_failed = True
@@ -207,7 +224,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                                             "/block", data=data)
                                 send_failed = False
                             except:
-                                print("Send failed", miner_ip)
+                                # print("Send failed", miner_ip)
                                 time.sleep(0.2)
                 # If selfish miner
                 else:
