@@ -8,6 +8,7 @@ import requests
 from transaction import Transaction
 import pickle
 import copy
+import json
 
 class Block:
     def __init__(self, transactions, previous_header_hash, hash_tree_root, timestamp, nonce, ledger):
@@ -17,7 +18,7 @@ class Block:
         self.hash_tree_root = hash_tree_root  # tree root in bytes
         self.timestamp = timestamp  # unix time in string
         self.nonce = nonce  # nonce in int
-        self.ledger = ledger
+        self.ledger = ledger #ledger object
 
     def header_hash(self):
         # Creates header value
@@ -39,7 +40,7 @@ class SPVBlock:
         self.header_hash = block.header_hash()
         self.prev_header_hash = block.previous_header_hash
         # TODO add ledger
-        self.ledger = ledger
+        self.balance = balance
 
 
 
@@ -63,6 +64,10 @@ class BlockChain:
 
     def __init__(self, miner_ips):
             self.miner_ips = miner_ips
+
+    def retrieve_ledger(self):
+        block = self.last_block()
+        return block.ledger.balance
 
     def network_block_validate(self, block):
         # check again that incoming block has prev hash and target < nonce (in case malicious miner publishing invalid blocks)
@@ -270,34 +275,30 @@ class BlockChain:
 class Ledger:
 
     def __init__(self):
-        # self.blockchain = copy.deepcopy(blockchain)
-
-        # if self.blockchain.last_block is None:
-        #     self.ledger = dict()
-        # else:
-        #     self.ledger = self.blockchain.last_block().ledger
-        self.ledger = dict()
+        self.balance = dict()
 
     def update_ledger(self, transaction):
         transaction = Transaction.from_json(transaction)
         #add recipient to ledger if he doesn't exist
-        if transaction.receiver not in self.ledger:
-            self.ledger[transaction.receiver] = transaction.amount
+        if transaction.receiver.to_string().hex() not in self.balance:
+            self.balance[transaction.receiver.to_string().hex()] = transaction.amount
         else:
-            self.ledger[transaction.receiver] += transaction.amount
+            self.balance[transaction.receiver.to_string().hex()] += transaction.amount
 
         #don't have to check whether sender exists because it is done under verify_transaction
-        self.ledger[transaction.sender] -= transaction.amount
+        self.balance[transaction.sender.to_string().hex()] -= transaction.amount
       
 
     def coinbase_transaction(self, public_key):
-        if public_key not in self.ledger:
-            self.ledger[public_key] = 100
+        if public_key.to_string().hex() not in self.balance:
+            self.balance[public_key.to_string().hex()] = 100
         else:
-            self.ledger[public_key] += 100
+            self.balance[public_key.to_string().hex()] += 100
+        print("This is a coinbase transaction: " + json.dumps(self.balance))
+
 
     def get_balance(self, public_key):
-        return self.ledger[public_key]
+        return self.balance[public_key.to_string().hex()]
     
     #new_transaction, validated_transaction from create_merkel
     #transactions: validated transactions in existing blocks
@@ -309,12 +310,12 @@ class Ledger:
             validated_transactions[i] = Transaction.from_json(transaction)
         
         #check whether sender is in ledger
-        if new_transaction.sender not in self.ledger:
+        if new_transaction.sender.to_string().hex() not in self.balance:
             return False
 
         #check whether there is sufficient balance in sender's account
-        if new_transaction.amount > self.get_balance(new_transaction.sender):
-            print(f"There is insufficient balance for transaction in account {new_transaction.sender}")
+        if new_transaction.amount > self.get_balance(new_transaction.sender.to_string().hex()):
+            print(f"There is insufficient balance for transaction in account {new_transaction.sender.to_string().hex()}")
             return False
         
         #check signature
@@ -350,6 +351,7 @@ class Ledger:
             transaction.validate(transaction.sig)
         
         self.update_ledger(transaction)
+        print("Transaction has been verified: "+json.dumps(self.balance))
         return True
 
 # TODO Youngmin, so erm, it's a bit complex regarding the ledger
