@@ -24,7 +24,7 @@ block_header_queue = Queue()
 def parse_arguments(argv):
     inputfile = ''
     list_of_miner_ip = []
-    wallet_arg=None
+    private_key=None
     try:
         opts, args = getopt.getopt(
             argv, "hp:m:w:", ["port=", "iminerfile=", "wallet="])
