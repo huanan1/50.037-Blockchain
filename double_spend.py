@@ -116,8 +116,6 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
         pass
 
 
-transaction_queue = Queue()
-
 @app.route('/transaction', methods=['POST'])
 def new_transaction_network():
     new_transaction = pickle.loads(request.get_data())
