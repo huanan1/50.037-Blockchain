@@ -16,7 +16,7 @@ import json
 
 from blockchain import BlockChain, Block, SPVBlock, Ledger
 from transaction import Transaction
-from merkle_tree import MerkleTree
+from merkle_tree import MerkleTree, verify_proof
 
 
 
@@ -330,14 +330,30 @@ def new_transaction_network():
 @app.route('/verify_transaction_from_spv', methods=['POST'])
 def verify_transaction_from_spv():
     data = request.data.decode()
+    print(data)
     blockchain_request_queue.put(None)
     blockchain_tuple = blockchain_reply_queue.get()
     cleaned_keys, chain = blockchain_tuple[0], blockchain_tuple[1]
-    for i in cleaned_keys:
+    for count, i in enumerate(cleaned_keys):
         merkle_tree = chain[i].transactions
-        print(i, merkle_tree.leaf_set)
+        # print(i, merkle_tree.leaf_set)
         for j in merkle_tree.leaf_set:
             print(json.loads(j.decode())["txid"])
+            if json.loads(j.decode())["txid"] == data:
+                # reply = json.loads(j.decode())
+                proof_bytes = merkle_tree.get_proof(j.decode())
+                proof_string = []
+                print(proof_bytes)
+                for k in proof_bytes:
+                    proof_string.append(binascii.hexlify(k).decode())
+                root_bytes = merkle_tree.get_root()
+                root_string = binascii.hexlify(root_bytes).decode()
+                print("YEAH")
+                print(j.decode(), proof_bytes, root_bytes)
+                # print ("verify", verify_proof(j.decode(), proof_bytes, root_bytes))
+                reply = {"entry": j.decode(), "proof": proof_string, "root": root_string}
+                return jsonify(reply)
+                # reply["confirmations"] = len(len(cleaned_keys)- count)
         # print(merkle_tree.leaf_set)
     return ""
 

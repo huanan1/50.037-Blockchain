@@ -56,6 +56,8 @@ class MerkleTree:
             # elements is what is returned
             elements = []
             # if it matches
+            # print("TESTING")
+            # print(i == str(check).encode(), i, str(check).encode())
             if i == str(check).encode():
                 # make both partner and current equal to the 'starting position'
                 partner_node = count
@@ -118,4 +120,15 @@ def verify_proof(entry, proof, root):
         return True
     return False
 
-# print(verify_proof(453, merkletree.get_proof(453), merkletree.get_root()))
+merkletree = MerkleTree()
+
+for i in range(80):
+    merkletree.add(str(random.randint(100, 1000)))
+merkletree.add(str(453))
+# for i in range(50):
+#     merkletree.add(random.randint(100, 1000))
+
+merkletree.build()
+print(merkletree.get_proof(str(453)),  binascii.hexlify(merkletree.get_root()).decode())
+print(binascii.hexlify(merkletree.get_root()).decode(), binascii.unhexlify(bytes(binascii.hexlify(merkletree.get_root()).decode(), 'utf-8')))
+print(verify_proof(str(453), merkletree.get_proof(str(453)), merkletree.get_root()))

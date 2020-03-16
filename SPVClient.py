@@ -3,9 +3,11 @@ from ecdsa import SigningKey
 from transaction import Transaction
 from blockchain import BlockChain, Block
 from merkle_tree import verify_proof
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from multiprocessing import Process, Queue
+from merkle_tree import verify_proof
 
+import binascii
 import time
 import getopt
 import sys
@@ -160,13 +162,29 @@ def createTransaction():
 def clientCheckBalance():
     return user.check_balance(Ledger)
 
-@app.route('/verify_transaction', methods=['POST'])
-def verify_Transaction():
-    data = request.data.decode()
+@app.route('/verify_transaction/<txid>', methods=['GET'])
+def verify_Transaction(txid):
     # requests.post(url, headers=headers, data=
     miner_ip = random.choice(LIST_OF_MINER_IP)
-    requests.post("http://"+ miner_ip + "/verify_transaction_from_spv", data=data)
-    return None
+    print(miner_ip, txid)
+    # try:
+    response = json.loads(requests.post("http://"+ miner_ip + "/verify_transaction_from_spv", data=txid).text)
+    print(response)
+    entry = response["entry"]
+    proof_string = response["proof"]
+    proof_bytes = []
+    for i in proof_string:
+        proof_bytes.append(binascii.unhexlify(bytes(i, 'utf-8')))
+    root_bytes = binascii.unhexlify(bytes(response["root"], 'utf-8'))
+    print(entry, proof_bytes, root_bytes)
+    verify = verify_proof(entry, proof_bytes, root_bytes)
+    if verify:
+        # TODO check if entry has the same TXID
+        # TODO Check if the root is actually in blockchain
+        reply = {"Confirmations": 5, "Block_header": "Blah blah"}
+        return jsonify(reply)
+    # finally:
+    return jsonify("TXID not found")
     
 
 if __name__ == '__main__':
