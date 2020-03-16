@@ -157,7 +157,7 @@ class Miner:
         merkletree = MerkleTree()
         # TODO: Add coinbase TX
         ### CHECK SENDER
-        merkletree.add(Transaction(ecdsa.SigningKey.generate(),PUBLIC_KEY,100).to_json())
+        merkletree.add(Transaction(ecdsa.SigningKey.generate().get_verifying_key(),PUBLIC_KEY,100).to_json())
         ledger.coinbase_transaction(PUBLIC_KEY)
         print("merkel tree has been created" + json.dumps(ledger.balance))
 
@@ -172,12 +172,14 @@ def create_sample_merkle():
     merkletree = MerkleTree()
     from ecdsa import SigningKey
     sender = SigningKey.generate()
+    sender_vk = sender.get_verifying_key()
     receiver = SigningKey.generate()
+    receiver_vk = receiver.get_verifying_key()
     for i in range(10):
         if i == 0:
             # coinbase
-            merkletree.add(Transaction(sender, receiver, 100).to_json())
-        # merkletree.add(Transaction(sender, receiver, random.randint(100, 1000)).to_json())
+            merkletree.add(Transaction(sender_vk, receiver_vk, 100).to_json())
+        # merkletree.add(Transaction(sender_vk, receiver_vk, random.randint(100, 1000)).to_json())
     merkletree.build()
     return merkletree
 

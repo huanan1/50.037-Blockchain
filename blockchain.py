@@ -286,13 +286,13 @@ class Ledger:
     def update_ledger(self, transaction):
         transaction = Transaction.from_json(transaction)
         #add recipient to ledger if he doesn't exist
-        if transaction.receiver.to_string().hex() not in self.balance:
-            self.balance[transaction.receiver.to_string().hex()] = transaction.amount
+        if transaction not in self.balance:
+            self.balance[transaction] = transaction.amount
         else:
-            self.balance[transaction.receiver.to_string().hex()] += transaction.amount
+            self.balance[transaction] += transaction.amount
 
         #don't have to check whether sender exists because it is done under verify_transaction
-        self.balance[transaction.sender.to_string().hex()] -= transaction.amount
+        self.balance[transaction] -= transaction.amount
       
 
     def coinbase_transaction(self, public_key):
@@ -316,12 +316,12 @@ class Ledger:
             validated_transactions[i] = Transaction.from_json(transaction)
         
         #check whether sender is in ledger
-        if new_transaction.sender.to_string().hex() not in self.balance:
+        if new_transaction.sender not in self.balance:
             return False
 
         #check whether there is sufficient balance in sender's account
-        if new_transaction.amount > self.get_balance(new_transaction.sender.to_string().hex()):
-            print(f"There is insufficient balance for transaction in account {new_transaction.sender.to_string().hex()}")
+        if new_transaction.amount > self.get_balance(new_transaction.sender):
+            print(f"There is insufficient balance for transaction in account {new_transaction.sender}")
             return False
         
         #check signature
@@ -424,15 +424,17 @@ def test_network_add():
 
     from ecdsa import SigningKey
     sender = SigningKey.generate()
+    sender_vk = sender.get_verifying_key()
     receiver = SigningKey.generate()
+    receiver_vk = receiver.get_verifying_key()
 
     # Genesis block
     ledger = Ledger()
 
     merkletree = MerkleTree()
     for i in range(1):
-        merkletree.add(Transaction(sender, sender, 100).to_json())
-        ledger.coinbase_transaction(sender.to_string())
+        merkletree.add(Transaction(sender_vk, sender_vk, 100).to_json())
+        ledger.coinbase_transaction(sender_vk)
     merkletree.build()
     current_time = str(time.time())
     for nonce in range(10000000):
@@ -448,9 +450,9 @@ def test_network_add():
     for i in range(2):
         merkletree = MerkleTree()
         for i in range(5):
-            if i == 0: merkletree.add(Transaction(sender, sender, 100).to_json())
+            if i == 0: merkletree.add(Transaction(sender_vk, sender_vk, 100).to_json())
             else:
-                merkletree.add(Transaction(sender, receiver, random.randint(100,1000)).to_json())
+                merkletree.add(Transaction(sender_vk, receiver_vk, random.randint(100,1000)).to_json())
         merkletree.build()
         current_time = str(time.time())
         last_hash = random.choice(

@@ -10,15 +10,17 @@ class Transaction:
 
     def __init__(self, sender_vk, receiver_vk, amount, comment="", time=time.time(), txid="", sig=b"", sender_pk=None):
         try:
+            # need to do hexlify and decode to change public key to string format during instantiation
             self.sender_vk = binascii.hexlify(sender_vk.to_string()).decode()
         except:
-            self.sender_vk = sender_vk # private key
+            # already in string format
+            self.sender_vk = sender_vk # public key
         try:
             self.receiver_vk = binascii.hexlify(receiver_vk.to_string()).decode()
         except:
-            self.receiver_vk = receiver_vk  # verifying key
+            self.receiver_vk = receiver_vk # verifying key
         print(type(sender_pk))
-        self.sender_pk = sender_pk  # verifying key
+        self.sender_pk = sender_pk  # private key
         assert amount > 0
         self.amount = amount
         self.comment = comment
