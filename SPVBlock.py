@@ -8,17 +8,17 @@ import requests
 from transaction import Transaction
 import pickle
 import copy
+from blockchain import BlockChain
 
-class Block:
-    def __init__(self, transactions, previous_header_hash, hash_tree_root, timestamp, nonce):
+class SPVBlock:
+    def __init__(self, previous_header_hash, hash_tree_root, timestamp, nonce):
         # Instantiates object from passed values
-        self.transactions = transactions  # MerkleTree object
         self.previous_header_hash = previous_header_hash  # Previous hash in string
         self.hash_tree_root = hash_tree_root  # tree root in bytes
         self.timestamp = timestamp  # unix time in string
         self.nonce = nonce  # nonce in int
 
-    def header_hash(self):
+    def header(self):
         # Creates header value
         header_joined = binascii.hexlify(
             self.hash_tree_root).decode() + str(self.timestamp) + str(self.nonce)
@@ -32,23 +32,13 @@ class Block:
         m.update(round1)
         return m.digest()
 
-class SPVBlock:
-    def __init__(self, block):
-        # Instantiates object from passed values
-        self.header_hash = block.header_hash()
-        self.prev_header_hash = block.previous_header_hash
-        # TODO add ledger
-        self.ledger = None
 
-    def get_block_headers(self):
-        pass 
-
-class BlockChain:
+class SPVBlockChain:
     # chain is a dictionary, key is hash header, value is the header metadata of blocks
     chain = dict()
     TARGET = b"\x00\x00\x0f\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
     last_hash = None
-    # Cleaned keys is an ordered list of all the header hashes, only updated on BlockChain.resolve() call
+    # Cleaned keys is an ordered list of all the header hashes, only updated on SPVBlockChain.resolve() call
     cleaned_keys = []
     # Target average time in seconds
     target_average_time = 3.5
@@ -68,26 +58,25 @@ class BlockChain:
         # check again that incoming block has prev hash and target < nonce (in case malicious miner publishing invalid blocks)
         check1 = self.validate(block)
         # check if transactions are valid (sender has enough money, and TXIDs have not appeared in the previous blocks)
-        check2 = self.verify_transactions(copy.deepcopy(block.transactions.leaf_set), block.previous_header_hash)
-        print(check1, check2)
+        # check2 = self.verify_transactions(copy.deepcopy(block.transactions.leaf_set), block.previous_header_hash)
+        print(check1)#, check2)
         # check2 = True
-        return check1 and check2
+        return check1# and check2
 
     def network_add(self, block):
         # check for genesis block
         if block.previous_header_hash is None:
-            # check that number of transactions is 1 in genesis block
-            if len(block.transactions.leaf_set) != 1:
-                print("genesis block should have only one transaction.")
-                return False
-            coinbase_tx = Transaction.from_json(block.transactions.leaf_set[0])
-            if coinbase_tx.amount != 100:
-                print("coinbase transaction should have amount == 100")
-                return False
-            self.chain[binascii.hexlify(block.header_hash()).decode()] = block
+            # # check that number of transactions is 1 in genesis block
+            # if len(block.transactions.leaf_set) != 1:
+            #     print("genesis block should have only one transaction.")
+            #     return False
+            # coinbase_tx = Transaction.from_json(block.transactions.leaf_set[0])
+            # if coinbase_tx.amount != 100:
+            #     print("coinbase transaction should have amount == 100")
+            #     return False
+            # self.chain[binascii.hexlify(block.header_hash()).decode()] = block
             return True
 
-        # print("Before", self.network_cached_blocks)
         if self.network_block_validate(block):
             header_hash = binascii.hexlify(block.header_hash()).decode()
             self.chain[header_hash] = block
@@ -126,40 +115,40 @@ class BlockChain:
             if prev_hash_temp == None:
                 chain_uptil_prev.append(prev_hash_temp)
             break
-        # try:
-        #     chain_uptil_prev = self.cleaned_keys[:self.cleaned_keys.index(prev_header_hash)+1]
-        # except:
-        #     return False
+        try:
+            chain_uptil_prev = self.cleaned_keys[:self.cleaned_keys.index(prev_header_hash)+1]
+        except:
+            return False
         # convert transactions to Transaction objects
-        for i, transaction in enumerate(transactions):
-            transactions[i] = Transaction.from_json(transaction)
+        # for i, transaction in enumerate(transactions):
+        #     transactions[i] = Transaction.from_json(transaction)
 
         # check coinbase transaction amount
-        if transactions[0].amount != 100:
-            print("the amt in the coinbase transaction is not 100")
-            return False
+        # if transactions[0].amount != 100:
+        #     print("the amt in the coinbase transaction is not 100")
+        #     return False
         
         # loop through all previous blocks
-        for hash in reversed(chain_uptil_prev):
-            prev_hash = prev_header_hash
-            prev_merkle_tree = self.chain[prev_hash].transactions
-            # loop through transactions in prev block
-            for i, transaction in enumerate(transactions[1:]):
-                # check if transaction has appeared in previous blocks
-                if prev_merkle_tree.get_proof(transaction) != []:
-                    # transaction repeated
-                    print(f"this transaction appeared before. Transaction: {transaction}")
-                    return False
+        # for hash in reversed(chain_uptil_prev):
+        #     prev_hash = prev_header_hash
+        #     prev_merkle_tree = self.chain[prev_hash].transactions
+        #     # loop through transactions in prev block
+        #     for i, transaction in enumerate(transactions[1:]):
+        #         # check if transaction has appeared in previous blocks
+        #         if prev_merkle_tree.get_proof(transaction) != []:
+        #             # transaction repeated
+        #             print(f"this transaction appeared before. Transaction: {transaction}")
+        #             return False
         
-        for transaction in transactions:
-            # check if transaction was really sent by the sender
-            try:
-                transaction.validate(transaction.sig)
-            except AssertionError:
-                print("sender's signature is not valid")
-            # check if sender has enough money
-            # if ledger.get_balance(transaction.sender) - transaction.amount < 0:
-                # return False
+        # for transaction in transactions:
+        #     # check if transaction was really sent by the sender
+        #     try:
+        #         transaction.validate(transaction.sig)
+        #     except AssertionError:
+        #         print("sender's signature is not valid")
+        #     # check if sender has enough money
+        #     # if ledger.get_balance(transaction.sender) - transaction.amount < 0:
+        #         # return False
         return True
 
     def add(self, block):
@@ -181,22 +170,22 @@ class BlockChain:
             # If Genesis block, there is no need to check for the last hash value
             return block.header_hash() < self.TARGET
 
-    def rebroadcast_transactions(self, block):
-        '''rebroadcast transactions from dropped blocks'''
-        transactions = copy.deepcopy(block.transactions.leaf_set)
+    # def rebroadcast_transactions(self, block):
+    #     '''rebroadcast transactions from dropped blocks'''
+    #     transactions = copy.deepcopy(block.transactions.leaf_set)
 
-        not_sent = True
-        for miner_ip in self.miner_ips:
-            for transaction in transactions:
-                data = pickle.dumps(transaction, protocol=2)
-                while not_sent:
-                    try:
-                        requests.post("http://"+miner_ip +
-                                    "/transaction", data=data)
-                        not_sent = False
-                    except:
-                        time.sleep(0.1)
-        return True
+    #     not_sent = True
+    #     for miner_ip in self.miner_ips:
+    #         for transaction in transactions:
+    #             data = pickle.dumps(transaction, protocol=2)
+    #             while not_sent:
+    #                 try:
+    #                     requests.post("http://"+miner_ip +
+    #                                 "/transaction", data=data)
+    #                     not_sent = False
+    #                 except:
+    #                     time.sleep(0.1)
+    #     return True
 
     def find_dropped_blocks(self):
         dropped_blocks = dict()
@@ -224,11 +213,11 @@ class BlockChain:
                 self.last_hash = None
 
             dropped_blocks = self.find_dropped_blocks()
-            for _, block in dropped_blocks.items():
-                rebroadcasted = False
-                while not rebroadcasted:
-                    # retry rebroadcasting until it succeeds
-                    rebroadcasted = self.rebroadcast_transactions(block)
+            # for _, block in dropped_blocks.items():
+            #     rebroadcasted = False
+            #     while not rebroadcasted:
+            #         # retry rebroadcasting until it succeeds
+            #         rebroadcasted = self.rebroadcast_transactions(block)
                 
 
     def resolve_DP(self, hash_check, score, cleared_hashes):
@@ -277,16 +266,16 @@ class BlockChain:
 # Test
 def main():
     # Create blockchain
-    blockchain = BlockChain([])
+    blockchain = SPVBlockChain([])
 
     # Genesis block
-    merkletree = MerkleTree()
-    for i in range(100):
-        merkletree.add(random.randint(100, 1000))
-    merkletree.build()
+    # merkletree = MerkleTree()
+    # for i in range(100):
+    #     merkletree.add(random.randint(100, 1000))
+    # merkletree.build()
     current_time = str(time.time())
     for nonce in range(10000000):
-        block = Block(merkletree, None, merkletree.get_root(),
+        block = SPVBlock(None, BlockChain.merkletree.get_root(),
                       current_time, nonce)
         # If the add is successful, stop loop
         if blockchain.add(block):
@@ -295,16 +284,16 @@ def main():
 
     # Other blocks (non-linear)
     for i in range(6):
-        merkletree = MerkleTree()
-        for i in range(100):
-            merkletree.add(random.randint(100, 1000))
-        merkletree.build()
+        # merkletree = MerkleTree()
+        # for i in range(100):
+        #     merkletree.add(random.randint(100, 1000))
+        # merkletree.build()
         current_time = str(time.time())
         last_hash = random.choice(
             list(blockchain.chain.keys()))
         for nonce in range(10000000):
-            block = Block(merkletree, last_hash,
-                          merkletree.get_root(), current_time, nonce)
+            block = SPVBlock(last_hash,
+                          BlockChain.merkletree.get_root(), current_time, nonce)
             if blockchain.add(block):
                 # If the add is successful, stop loop
                 break

@@ -14,7 +14,7 @@ from flask import Flask, request, jsonify
 from multiprocessing import Process, Queue
 import json
 
-from blockchain import BlockChain, Block, SPVBlock, Ledger
+from blockchain import BlockChain, Block, Ledger
 from transaction import Transaction
 from merkle_tree import MerkleTree, verify_proof
 
