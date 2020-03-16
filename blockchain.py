@@ -322,12 +322,12 @@ class Ledger:
             validated_transactions[i] = Transaction.from_json(transaction)
         
         #check whether sender is in ledger
-        if new_transaction.sender not in self.balance:
+        if new_transaction.sender_vk not in self.balance:
             return False
 
         #check whether there is sufficient balance in sender's account
-        if new_transaction.amount > self.get_balance(new_transaction.sender):
-            print(f"There is insufficient balance for transaction in account {new_transaction.sender}")
+        if new_transaction.amount > self.get_balance(new_transaction.sender_vk):
+            print(f"There is insufficient balance for transaction in account {new_transaction.sender_vk}")
             return False
         
         #check signature
