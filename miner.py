@@ -1,8 +1,6 @@
 from blockchain import Block, BlockChain
 import time
 import copy
-<<<<<<< HEAD
-=======
 import pickle
 import requests
 import sys
@@ -104,7 +102,6 @@ if PRIVATE_KEY is None:
 PUBLIC_KEY = PRIVATE_KEY.get_verifying_key()
 PUBLIC_KEY_STRING = PUBLIC_KEY.to_string().hex()
 print(PUBLIC_KEY_STRING)
->>>>>>> ken
 
 class Miner:
     def __init__(self, blockchain):
@@ -135,9 +132,6 @@ class Miner:
     def network_block(self, block):
         # Checks if the n
         if self.blockchain.network_add(block):
-<<<<<<< HEAD
-            self.reset_new_mine()
-=======
             self.reset_new_mine()
     
     def create_merkle(self, transaction_queue):
@@ -429,4 +423,3 @@ if __name__ == '__main__':
     p.start()
     app.run(host='0.0.0.0', debug=True, use_reloader=False, port=MY_PORT)
     p.join()
->>>>>>> ken

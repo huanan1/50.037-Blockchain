@@ -93,11 +93,11 @@ sender_pk = SigningKey.generate()
 sender_vk = sender_pk.get_verifying_key()
 
 receiver_vk = SigningKey.generate().get_verifying_key()
-# receiver_vk_vk = receiver_vk.get_verifying_key()
 # print(type(receiver_vk_vk))
 t1 = Transaction(sender_vk, receiver_vk, 100, sender_pk=sender_pk)
 t1_json = copy.deepcopy(t1.to_json())
 t1_back = Transaction.from_json(t1_json)
+assert t1_back.sender_pk is None
 
 # print(t1_json)
 print(t1)
