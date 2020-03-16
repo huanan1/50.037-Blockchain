@@ -14,7 +14,7 @@ from flask import Flask, request, jsonify
 from multiprocessing import Process, Queue
 import json
 
-from blockchain import BlockChain, Block, SPVBlock, Ledger
+from blockchain import BlockChain, Block, Ledger
 from transaction import Transaction
 from merkle_tree import MerkleTree, verify_proof
 
@@ -100,7 +100,6 @@ if PRIVATE_KEY is None:
     PRIVATE_KEY = ecdsa.SigningKey.generate()
 PUBLIC_KEY = PRIVATE_KEY.get_verifying_key()
 PUBLIC_KEY_STRING = binascii.hexlify(PUBLIC_KEY.to_string()).decode()
-print(PUBLIC_KEY_STRING)
 
 class Miner:
     def __init__(self, blockchain):
@@ -138,10 +137,10 @@ class Miner:
         block = self.blockchain.last_block()
         if block is None:
             ledger = Ledger()
-            print("ledger for genesis block")
+            # print("ledger for genesis block")
         else:
             ledger = block.ledger
-            print("ledger for non-genesis block: " + json.dumps(block.ledger.balance))
+            # print("ledger for non-genesis block: " + json.dumps(block.ledger.balance))
         list_of_raw_transactions = []
         list_of_validated_transactions = []
         while not transaction_queue.empty():
@@ -158,8 +157,8 @@ class Miner:
         ### CHECK SENDER
         coinbase_sender_pk = SigningKey.generate()
         coinbase_sender_vk = coinbase_sender_pk.get_verifying_key()
-        merkletree.add(Transaction(coinbase_sender_vk,PUBLIC_KEY,100, sender_pk= coinbase_sender_pk).to_json())
-        ledger.coinbase_transaction(PUBLIC_KEY)
+        merkletree.add(Transaction(coinbase_sender_vk, PUBLIC_KEY,100, sender_pk= coinbase_sender_pk).to_json())
+        ledger.coinbase_transaction(PUBLIC_KEY_STRING)
         # print("merkel tree has been created" + json.dumps(ledger.balance))
 
         for transaction in list_of_validated_transactions:
@@ -248,7 +247,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                                             "/block", data=data)
                                 send_failed = False
                             except:
-                                # print("Send failed", miner_ip)
+                                print("Send failed", miner_ip)
                                 time.sleep(0.2)
                 # If selfish miner
                 else:
@@ -305,7 +304,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                     blockchain_reply_queue.put((copy.deepcopy(blockchain.cleaned_keys), copy.deepcopy(blockchain.chain),
                         copy.deepcopy(blockchain.retrieve_ledger())))
         # Section run if the miner found a block or receives a block that has been broadcasted
-        print(COLOR +"PORT: {}\n".format(MY_PORT) + mine_or_recv +
+        print(COLOR + "Public key: {}\n".format(PUBLIC_KEY_STRING) + "PORT: {}\n".format(MY_PORT) + mine_or_recv + "\n" +
               (str(miner.blockchain) if MODE == 1 else str(miner.blockchain).split("~~~\n")[1]))
         # merkletree = create_merkle(transaction_queue)
 
@@ -324,7 +323,7 @@ def new_block_network():
 
 @app.route('/transaction', methods=['POST'])
 def new_transaction_network():
-    new_transaction = pickle.loads(request.get_data())
+    new_transaction = Transaction.from_json(request.data)
     transaction_queue.put(new_transaction)
     return ""
 
@@ -407,19 +406,27 @@ def request_account_balance(public_key):
     ledger = blockchain_reply_queue.get()[2]
     return jsonify(ledger[public_key])
 
-@app.route('/send_transaction?receiver=<receiver_public_key>&amount=<amount>')
-def request_send_transaction(receiver_public_key, amount):
+@app.route('/send_transaction')
+def request_send_transaction():
+    receiver_public_key= request.args.get('receiver_public_key', '')
+    amount = request.args.get('amount', '')
     # TODO Send to all miners
-    new_transaction = Transaction(receiver_public_key, amount)
+    new_transaction = Transaction(PUBLIC_KEY, receiver_public_key, int(amount), sender_pk=PRIVATE_KEY)
     # broadcast to all known miners
+    # print(new_transaction)
+    # data = pickle.dumps(new_transaction, protocol=2)
     for miner in LIST_OF_MINER_IP:
         # execute post request to broadcast transaction
         requests.post(
             url=miner + "/transaction",
-            txn=new_transaction
+            data=new_transaction.to_json()
         )
-    # TODO Add to own transaction queue
-    transaction_queue.put(new_transaction)
+    # # TODO Add to own transaction queue
+    requests.post(
+            url="http://127.0.0.1:" + "2001" + "/transaction",
+            data=new_transaction.to_json()
+        )
+    return ""
     
 
 if __name__ == '__main__':

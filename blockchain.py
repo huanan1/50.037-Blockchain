@@ -292,32 +292,38 @@ class Ledger:
       
 
     def coinbase_transaction(self, public_key):
-        if public_key.to_string().hex() not in self.balance:
-            self.balance[public_key.to_string().hex()] = 100
+        if public_key not in self.balance:
+            self.balance[public_key] = 100
         else:
-            self.balance[public_key.to_string().hex()] += 100
+            self.balance[public_key] += 100
         # print("This is a coinbase transaction: " + json.dumps(self.balance))
 
 
     def get_balance(self, public_key):
-        return self.balance[public_key.to_string().hex()]
+        try:
+            return self.balance[public_key]
+        except:
+            return 0
     
     #new_transaction, validated_transaction from create_merkel
     #transactions: validated transactions in existing blocks
     def verify_transaction(self, new_transaction, validated_transactions, transactions, prev_header_hash):
         
         #change transactions to Transaction objects
-        new_transaction = Transaction.from_json(new_transaction)
+        try:
+            new_transaction = Transaction.from_json(new_transaction)
+        except:
+            pass
         for i, transaction in enumerate(validated_transactions):
             validated_transactions[i] = Transaction.from_json(transaction)
         
         #check whether sender is in ledger
-        if new_transaction.sender not in self.balance:
+        if new_transaction.sender_vk not in self.balance:
             return False
 
         #check whether there is sufficient balance in sender's account
-        if new_transaction.amount > self.get_balance(new_transaction.sender):
-            print(f"There is insufficient balance for transaction in account {new_transaction.sender}")
+        if new_transaction.amount > self.get_balance(new_transaction.sender_vk):
+            print(f"There is insufficient balance for transaction in account {new_transaction.sender_vk}")
             return False
         
         #check signature

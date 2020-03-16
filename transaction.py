@@ -15,6 +15,7 @@ class Transaction:
         except:
             # already in string format
             self.sender_vk = sender_vk # public key
+        # print(type(self.sender_vk))
         try:
             self.receiver_vk = binascii.hexlify(receiver_vk.to_string()).decode()
         except:
