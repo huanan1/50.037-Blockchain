@@ -280,7 +280,10 @@ class Ledger:
         self.balance = dict()
 
     def update_ledger(self, transaction):
-        transaction = Transaction.from_json(transaction)
+        try:
+            transaction = Transaction.from_json(transaction)
+        except:
+            pass
         #add recipient to ledger if he doesn't exist
         if transaction.receiver_vk not in self.balance:
             self.balance[transaction.receiver_vk] = transaction.amount
@@ -309,11 +312,13 @@ class Ledger:
     #transactions: validated transactions in existing blocks
     def verify_transaction(self, new_transaction, validated_transactions, transactions, prev_header_hash, blockchain):
         print("entered verify transactions ledger")
+        transactions = copy.deepcopy(transactions)
         #change transactions to Transaction objects
-        try:
-            new_transaction = Transaction.from_json(new_transaction)
-        except:
-            pass
+        new_transaction
+        # try:
+        #     new_transaction = Transaction.from_json(new_transaction)
+        # except:
+        #     pass
         for i, transaction in enumerate(validated_transactions):
             validated_transactions[i] = Transaction.from_json(transaction)
         
@@ -343,7 +348,7 @@ class Ledger:
         chain_uptil_prev = [prev_header_hash]
         while True:
             try:
-                prev_hash_temp = blockchain[prev_hash_temp].previous_header_hash
+                prev_hash_temp = blockchain.chain[prev_hash_temp].previous_header_hash
                 chain_uptil_prev.append(prev_hash_temp)
             except KeyError:
                 print(f"there's no such hash: {prev_hash_temp} in the chain")
@@ -361,7 +366,7 @@ class Ledger:
         # loop through all previous blocks
         for hash in reversed(chain_uptil_prev):
             prev_hash = prev_header_hash
-            prev_merkle_tree = blockchain[prev_hash].transactions
+            prev_merkle_tree = blockchain.chain[prev_hash].transactions
             # loop through transactions in prev block
             for i, transaction in enumerate(transactions[1:]):
                 # check if transaction has appeared in previous blocks

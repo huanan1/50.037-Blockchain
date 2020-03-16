@@ -106,8 +106,8 @@ private_one = ecdsa.SigningKey.generate()
 private_two = ecdsa.SigningKey.generate()
 private_three = ecdsa.SigningKey.generate()
 
-TEST_LIST=[Transaction(private_one,private_one.get_verifying_key(),200, sender_pk = private_one ),Transaction(private_two,private_two.get_verifying_key(),150, sender_pk = private_two),
-                Transaction(private_three,private_three.get_verifying_key(),450, sender_pk=private_three)]
+# TEST_LIST=[Transaction(private_one,private_one.get_verifying_key(),200, sender_pk = private_one ),Transaction(private_two,private_two.get_verifying_key(),150, sender_pk = private_two),
+#                 Transaction(private_three,private_three.get_verifying_key(),450, sender_pk=private_three)]
 
 class Miner:
     def __init__(self, blockchain):
@@ -155,8 +155,8 @@ class Miner:
             list_of_raw_transactions.append(
                 transaction_queue.get())
         print("length",len(list_of_raw_transactions))
-        # for transaction in list_of_raw_transactions:
-        for transaction in TEST_LIST:
+        for transaction in list_of_raw_transactions:
+        # for transaction in TEST_LIST:
             print("entering verify")
             # TODO: check if transaction makes sense in the ledger
             if ledger.verify_transaction(transaction, list_of_validated_transactions, block.transactions.leaf_set, block.previous_header_hash, self.blockchain):
@@ -172,24 +172,27 @@ class Miner:
         # print("merkel tree has been created" + json.dumps(ledger.balance))
 
         for transaction in list_of_validated_transactions:
-            merkletree.add(transaction.to_json())
+            transaction_object = transaction.to_json()
+            # print(type(transaction_object))
+            merkletree.add(transaction_object)
         merkletree.build()
+        # print(merkletree.leaf_set)
         return merkletree, ledger
 
 
-# Random Merkletree
-def create_sample_merkle():
-    merkletree = MerkleTree()
-    from ecdsa import SigningKey
-    coinbase_sender_pk = SigningKey.generate()
-    coinbase_sender_vk = coinbase_sender_pk.get_verifying_key()
-    for i in range(10):
-        if i == 0:
-            # coinbase
-            merkletree.add(Transaction(coinbase_sender_vk, PUBLIC_KEY, 100, sender_pk=coinbase_sender_pk).to_json())
-        # merkletree.add(Transaction(sender_vk, receiver_vk, random.randint(100, 1000)).to_json())
-    merkletree.build()
-    return merkletree
+# # Random Merkletree
+# def create_sample_merkle():
+#     merkletree = MerkleTree()
+#     from ecdsa import SigningKey
+#     coinbase_sender_pk = SigningKey.generate()
+#     coinbase_sender_vk = coinbase_sender_pk.get_verifying_key()
+#     for i in range(10):
+#         if i == 0:
+#             # coinbase
+#             merkletree.add(Transaction(coinbase_sender_vk, PUBLIC_KEY, 100, sender_pk=coinbase_sender_pk).to_json())
+#         # merkletree.add(Transaction(sender_vk, receiver_vk, random.randint(100, 1000)).to_json())
+#     merkletree.build()
+#     return merkletree
 
 # TODO Youngmin, so erm, it's a bit complex regarding the ledger
 # There has to be a copy of the ledger at every single block
@@ -212,7 +215,7 @@ def create_sample_merkle():
 def start_mining(block_queue, transaction_queue, blockchain_request_queue, blockchain_reply_queue):
     blockchain = BlockChain(LIST_OF_MINER_IP)
     miner = Miner(blockchain)
-    merkletree = create_sample_merkle()
+    # merkletree = create_sample_merkle()
     miner_status = False
     list_of_blocks_selfish = []
     # Infinite loop
@@ -334,7 +337,8 @@ def new_block_network():
 
 @app.route('/transaction', methods=['POST'])
 def new_transaction_network():
-    new_transaction = Transaction.from_json(request.data)
+    # print(request.data)
+    new_transaction = Transaction.from_json(request.data.decode())
     transaction_queue.put(new_transaction)
     return ""
 
@@ -384,7 +388,7 @@ def request_full_blockchain():
         block_dictionary["nonce"] = block.nonce
         # TODO Modify transactions when the real transactions come
         transaction_list = []
-        for i in block.transactions.leaf_unset:
+        for i in block.transactions.leaf_set:
             transaction_list.append(i.decode())
         block_dictionary["transactions"] = transaction_list
         dic_chain[block_dictionary["header_hash"]] = block_dictionary
