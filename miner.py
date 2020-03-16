@@ -52,7 +52,6 @@ def parse_arguments(argv):
             for line in f:
                 list_of_miner_ip.append(line.strip())
         elif opt in ("-s", "--ispvfile"):
-            print("NO")
             inputfile = arg
             f = open(inputfile, "r")
             for line in f:
@@ -161,7 +160,7 @@ class Miner:
         coinbase_sender_vk = coinbase_sender_pk.get_verifying_key()
         merkletree.add(Transaction(coinbase_sender_vk,PUBLIC_KEY,100, sender_pk= coinbase_sender_pk).to_json())
         ledger.coinbase_transaction(PUBLIC_KEY)
-        print("merkel tree has been created" + json.dumps(ledger.balance))
+        # print("merkel tree has been created" + json.dumps(ledger.balance))
 
         for transaction in list_of_validated_transactions:
             merkletree.add(transaction.to_json())
@@ -340,18 +339,14 @@ def verify_transaction_from_spv():
         merkle_tree = chain[i].transactions
         # print(i, merkle_tree.leaf_set)
         for j in merkle_tree.leaf_set:
-            print(json.loads(j.decode())["txid"])
             if json.loads(j.decode())["txid"] == data:
                 # reply = json.loads(j.decode())
                 proof_bytes = merkle_tree.get_proof(j.decode())
                 proof_string = []
-                print(proof_bytes)
                 for k in proof_bytes:
                     proof_string.append(binascii.hexlify(k).decode())
                 root_bytes = merkle_tree.get_root()
                 root_string = binascii.hexlify(root_bytes).decode()
-                print("YEAH")
-                print(j.decode(), proof_bytes, root_bytes)
                 # print ("verify", verify_proof(j.decode(), proof_bytes, root_bytes))
                 reply = {"entry": j.decode(), "proof": proof_string, "root": root_string}
                 return jsonify(reply)
