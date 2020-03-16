@@ -340,19 +340,16 @@ def request_account_balance(public_key):
 @app.route('/send_transaction?receiver=<receiver_public_key>&amount=<amount>')
 def request_send_transaction(receiver_public_key, amount):
     # TODO Send to all miners
-    transaction_dictionary = dict()
-    transaction_dictionary["receiver_public_key"] = Transaction.receiver
-    transaction_dictionary["amount"]  = Transaction.amount
+    new_transaction = Transaction(receiver_public_key, amount)
     # broadcast to all known miners
     for miner in LIST_OF_MINER_IP:
         # execute post request to broadcast transaction
-        broadcast_endpoint = miner + "/transaction"
         requests.post(
-            url=broadcast_endpoint,
-            json=jsonify(transaction_dictionary)
+            url=miner + "/transaction",
+            txn=new_transaction
         )
     # TODO Add to own transaction queue
-    transaction_queue.put(transaction_dictionary)
+    transaction_queue.put(new_transaction)
     
 
 if __name__ == '__main__':

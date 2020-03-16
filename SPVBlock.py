@@ -32,6 +32,17 @@ class Block:
         m.update(round1)
         return m.digest()
 
+class SPVBlock:
+    def __init__(self, block):
+        # Instantiates object from passed values
+        self.header_hash = block.header_hash()
+        self.prev_header_hash = block.previous_header_hash
+        # TODO add ledger
+        self.ledger = None
+
+    def get_block_headers(self):
+        pass 
+
 class BlockChain:
     # chain is a dictionary, key is hash header, value is the header metadata of blocks
     chain = dict()
@@ -353,3 +364,4 @@ def test_network_add():
 
 if __name__ == '__main__':
     test_network_add()
+
