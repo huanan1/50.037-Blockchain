@@ -85,8 +85,11 @@ for count, i in enumerate(list_of_miner_ports):
     f.close()
     # Reads file
     if DOUBLE_SPENDING_ATTACK:
-        if count < 2: # only have two miners in double-spending attack demo
+        if count == 0:
             os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2 -a 1&".format(
+                i, colors[count % len(colors)], list_of_miner_wallets[count]))
+        elif count == 1: # count == 1:
+            os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(
                 i, colors[count % len(colors)], list_of_miner_wallets[count]))
     elif not SELFISH:
         os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(

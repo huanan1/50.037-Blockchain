@@ -15,7 +15,7 @@ from multiprocessing import Process, Queue
 from blockchain import BlockChain, Block, SPVBlock
 from transaction import Transaction
 from merkle_tree import MerkleTree
-
+from miner import Miner
 
 
 app = Flask(__name__)
@@ -100,37 +100,6 @@ if PRIVATE_KEY is None:
 PUBLIC_KEY = PRIVATE_KEY.get_verifying_key()
 PUBLIC_KEY_STRING = PUBLIC_KEY.to_string().hex()
 print(PUBLIC_KEY == binascii.unhexlify(bytes(PUBLIC_KEY_STRING, 'utf-8')))
-
-class Miner:
-    def __init__(self, blockchain):
-        self.blockchain = copy.deepcopy(blockchain)
-        self.nonce = 0
-        self.current_time = str(time.time())
-
-    def mine(self, merkletree):
-        block = Block(merkletree, self.blockchain.last_hash,
-                      merkletree.get_root(), self.current_time, self.nonce)
-        if self.blockchain.add(block):
-            # If the add is successful, reset
-            self.reset_new_mine()
-            # print(MY_IP)
-            return True
-        # Increase nonce everytime the mine fails
-        self.nonce += 1
-        return False
-
-    def reset_new_mine(self):
-        self.nonce = 0
-        self.current_time = str(time.time())
-        self.blockchain.resolve()
-        # resets after every block is added, both network and locally
-
-    # Called when a new block is received by another miner
-    def network_block(self, block):
-        # Checks if the n
-        if self.blockchain.network_add(block):
-            self.reset_new_mine()
-
 
 # Random Merkletree
 def create_sample_merkle():
