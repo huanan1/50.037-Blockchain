@@ -98,7 +98,7 @@ for count, i in enumerate(list_of_miner_ports):
         else:
             os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(
                 i, colors[count % len(colors)], list_of_miner_wallets[count]))
-    time.sleep(2)
+    time.sleep(5)
     # Removes file for cleanup
     os.system('rm partner_miner_ip.txt')
 

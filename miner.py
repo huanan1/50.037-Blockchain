@@ -101,6 +101,14 @@ if PRIVATE_KEY is None:
 PUBLIC_KEY = PRIVATE_KEY.get_verifying_key()
 PUBLIC_KEY_STRING = binascii.hexlify(PUBLIC_KEY.to_string()).decode()
 
+#testing
+private_one = ecdsa.SigningKey.generate()
+private_two = ecdsa.SigningKey.generate()
+private_three = ecdsa.SigningKey.generate()
+
+TEST_LIST=[Transaction(private_one,private_one.get_verifying_key(),200, sender_pk = private_one ),Transaction(private_two,private_two.get_verifying_key(),150, sender_pk = private_two),
+                Transaction(private_three,private_three.get_verifying_key(),450, sender_pk=private_three)]
+
 class Miner:
     def __init__(self, blockchain):
         self.blockchain = copy.deepcopy(blockchain)
@@ -133,7 +141,7 @@ class Miner:
             self.reset_new_mine()
     
     def create_merkle(self, transaction_queue):
-    #### not sure how to get the blockchain object here
+        print("entered create merkel")
         block = self.blockchain.last_block()
         if block is None:
             ledger = Ledger()
@@ -146,12 +154,14 @@ class Miner:
         while not transaction_queue.empty():
             list_of_raw_transactions.append(
                 transaction_queue.get())
-            print("list of raw transactions: " + str(list_of_raw_transactions))
-        for transaction in list_of_raw_transactions:
+        print("length",len(list_of_raw_transactions))
+        # for transaction in list_of_raw_transactions:
+        for transaction in TEST_LIST:
+            print("entering verify")
             # TODO: check if transaction makes sense in the ledger
-            if ledger.verify_transaction(transaction, list_of_validated_transactions, block.transactions.leaf_set, block.previous_header_hash):
+            if ledger.verify_transaction(transaction, list_of_validated_transactions, block.transactions.leaf_set, block.previous_header_hash, self.blockchain):
                 list_of_validated_transactions.append(transaction)
-                print("list of validated transactions: " +str(list_of_validated_transactions))
+                print("verification complete")
         merkletree = MerkleTree()
         # TODO: Add coinbase TX
         ### CHECK SENDER
@@ -210,6 +220,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
         #merkletree, ledger = create_sample_merkle()
         #create a merkel tree from transaction queue
         merkletree, ledger = miner.create_merkle(transaction_queue)
+        print("merkel created")
 
         while True:
             # print(LIST_OF_MINER_IP)
@@ -299,8 +310,8 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                     print("Received request of blockchain")
                     blockchain_request_queue.get()
                     print(blockchain.last_block())
-                    #ERROR block object is empty.
                     print(blockchain.retrieve_ledger())
+
                     blockchain_reply_queue.put((copy.deepcopy(blockchain.cleaned_keys), copy.deepcopy(blockchain.chain),
                         copy.deepcopy(blockchain.retrieve_ledger())))
         # Section run if the miner found a block or receives a block that has been broadcasted
