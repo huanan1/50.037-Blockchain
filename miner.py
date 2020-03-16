@@ -12,8 +12,9 @@ import json
 from ecdsa import SigningKey
 from flask import Flask, request, jsonify
 from multiprocessing import Process, Queue
+import json
 
-from blockchain import BlockChain, Block, SPVBlock
+from blockchain import BlockChain, Block, SPVBlock, Ledger
 from transaction import Transaction
 from merkle_tree import MerkleTree
 
@@ -100,7 +101,7 @@ if PRIVATE_KEY is None:
     PRIVATE_KEY = ecdsa.SigningKey.generate()
 PUBLIC_KEY = PRIVATE_KEY.get_verifying_key()
 PUBLIC_KEY_STRING = PUBLIC_KEY.to_string().hex()
-print(PUBLIC_KEY == binascii.unhexlify(bytes(PUBLIC_KEY_STRING, 'utf-8')))
+print(PUBLIC_KEY_STRING)
 
 class Miner:
     def __init__(self, blockchain):
@@ -108,9 +109,10 @@ class Miner:
         self.nonce = 0
         self.current_time = str(time.time())
 
-    def mine(self, merkletree):
+    def mine(self, merkletree, ledger):
         block = Block(merkletree, self.blockchain.last_hash,
-                      merkletree.get_root(), self.current_time, self.nonce)
+                      merkletree.get_root(), self.current_time, self.nonce, ledger)
+
         if self.blockchain.add(block):
             # If the add is successful, reset
             self.reset_new_mine()
@@ -131,6 +133,38 @@ class Miner:
         # Checks if the n
         if self.blockchain.network_add(block):
             self.reset_new_mine()
+    
+    def create_merkle(self, transaction_queue):
+    #### not sure how to get the blockchain object here
+        block = self.blockchain.last_block()
+        if block is None:
+            ledger = Ledger()
+            print("ledger for genesis block")
+        else:
+            ledger = block.ledger
+            print("ledger for non-genesis block: " + json.dumps(block.ledger.balance))
+        list_of_raw_transactions = []
+        list_of_validated_transactions = []
+        while not transaction_queue.empty():
+            list_of_raw_transactions.append(
+                transaction_queue.get())
+            print("list of raw transactions: " + str(list_of_raw_transactions))
+        for transaction in list_of_raw_transactions:
+            # TODO: check if transaction makes sense in the ledger
+            if ledger.verify_transaction(transaction, list_of_validated_transactions, block.transactions.leaf_set, block.previous_header_hash):
+                list_of_validated_transactions.append(transaction)
+                print("list of validated transactions: " +str(list_of_validated_transactions))
+        merkletree = MerkleTree()
+        # TODO: Add coinbase TX
+        ### CHECK SENDER
+        merkletree.add(Transaction(ecdsa.SigningKey.generate(),PUBLIC_KEY,100).to_json())
+        ledger.coinbase_transaction(PUBLIC_KEY)
+        print("merkel tree has been created" + json.dumps(ledger.balance))
+
+        for transaction in list_of_validated_transactions:
+            merkletree.add(transaction.to_json())
+        merkletree.build()
+        return merkletree, ledger
 
 
 # Random Merkletree
@@ -162,24 +196,7 @@ def create_sample_merkle():
 
 # Creates a merkle tree by compiling all of the transactions in transaction_queue
 # Sends the merkle tree to be made into a Block object
-def create_merkle(transaction_queue):
-    list_of_raw_transactions = []
-    list_of_validated_transactions = []
-    while not transaction_queue.empty():
-        list_of_raw_transactions.append(
-            Transaction.from_json(transaction_queue.get()))
-    for transaction in list_of_raw_transactions:
-        # TODO: check if transaction makes sense in the ledger
-        if True:
-            list_of_validated_transactions.append(transaction)
 
-    merkletree = MerkleTree()
-    # TODO: Add coinbase TX
-    # merkletree.add(COINBASE_TRANSACTION)
-    for transaction in list_of_validated_transactions:
-        merkletree.add(transaction.to_json())
-    merkletree.build()
-    return merkletree
 
 
 def start_mining(block_queue, transaction_queue, blockchain_request_queue, blockchain_reply_queue):
@@ -190,10 +207,14 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
     list_of_blocks_selfish = []
     # Infinite loop
     while True:
+        #merkletree, ledger = create_sample_merkle()
+        #create a merkel tree from transaction queue
+        merkletree, ledger = miner.create_merkle(transaction_queue)
+
         while True:
             # print(LIST_OF_MINER_IP)
             # Mines the nonce every round
-            miner_status = miner.mine(merkletree)
+            miner_status = miner.mine(merkletree, ledger)
             mine_or_recv = ""
             # Check if that mine is successful
             if miner_status:
@@ -277,7 +298,11 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                 if not blockchain_request_queue.empty():
                     print("Received request of blockchain")
                     blockchain_request_queue.get()
-                    blockchain_reply_queue.put((copy.deepcopy(blockchain.cleaned_keys), copy.deepcopy(blockchain.chain),copy.deepcopy(blockchain.last_block())))
+                    print(blockchain.last_block())
+                    #ERROR block object is empty.
+                    print(blockchain.retrieve_ledger())
+                    blockchain_reply_queue.put((copy.deepcopy(blockchain.cleaned_keys), copy.deepcopy(blockchain.chain),
+                        copy.deepcopy(blockchain.retrieve_ledger())))
         # Section run if the miner found a block or receives a block that has been broadcasted
         print(COLOR +"PORT: {}\n".format(MY_PORT) + mine_or_recv +
               (str(miner.blockchain) if MODE == 1 else str(miner.blockchain).split("~~~\n")[1]))
@@ -366,9 +391,8 @@ def request_block(header_hash):
 @app.route('/account_balance/<public_key>')
 def request_account_balance(public_key):
     blockchain_request_queue.put(None)
-    block = blockchain_reply_queue.get()[2]
-    # TODO
-    return None
+    ledger = blockchain_reply_queue.get()[2]
+    return jsonify(ledger[public_key])
 
 @app.route('/send_transaction?receiver=<receiver_public_key>&amount=<amount>')
 def request_send_transaction(receiver_public_key, amount):

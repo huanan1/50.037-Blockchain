@@ -8,15 +8,17 @@ import requests
 from transaction import Transaction
 import pickle
 import copy
+import json
 
 class Block:
-    def __init__(self, transactions, previous_header_hash, hash_tree_root, timestamp, nonce):
+    def __init__(self, transactions, previous_header_hash, hash_tree_root, timestamp, nonce, ledger):
         # Instantiates object from passed values
         self.transactions = transactions  # MerkleTree object
         self.previous_header_hash = previous_header_hash  # Previous hash in string
         self.hash_tree_root = hash_tree_root  # tree root in bytes
         self.timestamp = timestamp  # unix time in string
         self.nonce = nonce  # nonce in int
+        self.ledger = ledger #ledger object
 
     def header_hash(self):
         # Creates header value
@@ -33,12 +35,12 @@ class Block:
         return m.digest()
 
 class SPVBlock:
-    def __init__(self, block):
+    def __init__(self, block, ledger):
         # Instantiates object from passed values
         self.header_hash = block.header_hash()
         self.prev_header_hash = block.previous_header_hash
         # TODO add ledger
-        self.ledger = None
+        self.balance = balance
 
 
 
@@ -62,6 +64,10 @@ class BlockChain:
 
     def __init__(self, miner_ips):
             self.miner_ips = miner_ips
+
+    def retrieve_ledger(self):
+        block = self.last_block()
+        return block.ledger.balance
 
     def network_block_validate(self, block):
         # check again that incoming block has prev hash and target < nonce (in case malicious miner publishing invalid blocks)
@@ -272,11 +278,109 @@ class BlockChain:
         reply = reply[:-4]
         return reply
 
+class Ledger:
+
+    def __init__(self):
+        self.balance = dict()
+
+    def update_ledger(self, transaction):
+        transaction = Transaction.from_json(transaction)
+        #add recipient to ledger if he doesn't exist
+        if transaction.receiver.to_string().hex() not in self.balance:
+            self.balance[transaction.receiver.to_string().hex()] = transaction.amount
+        else:
+            self.balance[transaction.receiver.to_string().hex()] += transaction.amount
+
+        #don't have to check whether sender exists because it is done under verify_transaction
+        self.balance[transaction.sender.to_string().hex()] -= transaction.amount
+      
+
+    def coinbase_transaction(self, public_key):
+        if public_key.to_string().hex() not in self.balance:
+            self.balance[public_key.to_string().hex()] = 100
+        else:
+            self.balance[public_key.to_string().hex()] += 100
+        print("This is a coinbase transaction: " + json.dumps(self.balance))
+
+
+    def get_balance(self, public_key):
+        return self.balance[public_key.to_string().hex()]
+    
+    #new_transaction, validated_transaction from create_merkel
+    #transactions: validated transactions in existing blocks
+    def verify_transaction(self, new_transaction, validated_transactions, transactions, prev_header_hash):
+        
+        #change transactions to Transaction objects
+        new_transaction = Transaction.from_json(new_transaction)
+        for i, transaction in enumerate(validated_transactions):
+            validated_transactions[i] = Transaction.from_json(transaction)
+        
+        #check whether sender is in ledger
+        if new_transaction.sender.to_string().hex() not in self.balance:
+            return False
+
+        #check whether there is sufficient balance in sender's account
+        if new_transaction.amount > self.get_balance(new_transaction.sender.to_string().hex()):
+            print(f"There is insufficient balance for transaction in account {new_transaction.sender.to_string().hex()}")
+            return False
+        
+        #check signature
+        new_transaction.validate(new_transaction.sig)
+        
+        #check whether txid exists in validated transactions
+        for transaction in validated_transactions:
+            if new_transaction.txid == transaction.txid:
+                print(f"this transaction appeared before. Transaction: {transaction}")
+                return False
+              
+        self.blockchain.resolve()
+        # obtain blocks in blockchain uptil block with previous header hash
+        chain_uptil_prev = self.blockchain.cleaned_keys[:self.blockchain.cleaned_keys.index(prev_header_hash)+1]
+
+        for i, transaction in enumerate(transactions):
+            transactions[i] = Transaction.from_json(transaction)
+
+        #check for existing transactions in previous blocks
+        # loop through all previous blocks 
+        for hash in reversed(chain_uptil_prev):
+            prev_hash = prev_header_hash
+            prev_merkle_tree = self.blockchain.chain[prev_hash].transactions
+            # loop through transactions in prev block
+            for i, transaction in enumerate(transactions[1:]):
+                # check if transaction has appeared in previous blocks
+                if prev_merkle_tree.get_proof(transaction) != []:
+                    # transaction repeated
+                    print(f"this transaction appeared before. Transaction: {transaction}")
+                    return False
+
+        for transaction in transactions:
+            transaction.validate(transaction.sig)
+        
+        self.update_ledger(transaction)
+        print("Transaction has been verified: "+json.dumps(self.balance))
+        return True
+
+# TODO Youngmin, so erm, it's a bit complex regarding the ledger
+# There has to be a copy of the ledger at every single block
+# This is to ensure that Huan An's validation code can work
+# I am not sure if you want to do a class, or a text file or something
+# I suggest putting the ledger in the Block object, so every Block has a copy
+# of the ledger, then when the new transactions come, you can pull out the latest
+# block, using Blockchain.last_block() will return you the latest block, so you will
+# have the latest ledger to be used here in the merkle_tree
+
+# There are 2 main checks to be done here
+# 1. The accounts involved have enough money to transact, depending on the ledger
+# 2. TXID (hash of transaction, not created yet) is not duplicated. I can't think of a way other than looking through EVERY transaction
+
 
 # Test
 def main():
     # Create blockchain
     blockchain = BlockChain([])
+    
+    #create ledger
+    ledger = Ledger()
 
     # Genesis block
     merkletree = MerkleTree()
@@ -286,9 +390,10 @@ def main():
     current_time = str(time.time())
     for nonce in range(10000000):
         block = Block(merkletree, None, merkletree.get_root(),
-                      current_time, nonce)
+                      current_time, nonce, ledger)
         # If the add is successful, stop loop
         if blockchain.add(block):
+            # block.ledger.coinbase_transaction("random public key ???")
             break
     print(blockchain)
 
@@ -322,14 +427,17 @@ def test_network_add():
     receiver = SigningKey.generate()
 
     # Genesis block
+    ledger = Ledger()
+
     merkletree = MerkleTree()
     for i in range(1):
         merkletree.add(Transaction(sender, sender, 100).to_json())
+        ledger.coinbase_transaction(sender.to_string())
     merkletree.build()
     current_time = str(time.time())
     for nonce in range(10000000):
         block = Block(merkletree, None, merkletree.get_root(),
-                      current_time, nonce)
+                      current_time, nonce, ledger)
         # If the add is successful, stop loop
         if blockchain.validate(block):
             blockchain.network_add(block)
