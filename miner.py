@@ -8,6 +8,7 @@ import getopt
 import colorama
 import binascii
 import ecdsa
+import json
 from ecdsa import SigningKey
 from flask import Flask, request, jsonify
 from multiprocessing import Process, Queue
@@ -190,6 +191,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
     # Infinite loop
     while True:
         while True:
+            # print(LIST_OF_MINER_IP)
             # Mines the nonce every round
             miner_status = miner.mine(merkletree)
             mine_or_recv = ""
@@ -298,6 +300,20 @@ def new_block_network():
 def new_transaction_network():
     new_transaction = pickle.loads(request.get_data())
     transaction_queue.put(new_transaction)
+    return ""
+
+@app.route('/verify_transaction_from_spv', methods=['POST'])
+def verify_transaction_from_spv():
+    data = request.data.decode()
+    blockchain_request_queue.put(None)
+    blockchain_tuple = blockchain_reply_queue.get()
+    cleaned_keys, chain = blockchain_tuple[0], blockchain_tuple[1]
+    for i in cleaned_keys:
+        merkle_tree = chain[i].transactions
+        print(i, merkle_tree.leaf_set)
+        for j in merkle_tree.leaf_set:
+            print(json.loads(j.decode())["txid"])
+        # print(merkle_tree.leaf_set)
     return ""
 
 @app.route('/request_blockchain_headers')

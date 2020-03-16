@@ -117,3 +117,5 @@ def verify_proof(entry, proof, root):
     if non_leaf == root:
         return True
     return False
+
+# print(verify_proof(453, merkletree.get_proof(453), merkletree.get_root()))

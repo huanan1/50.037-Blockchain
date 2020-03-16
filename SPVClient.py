@@ -1,7 +1,7 @@
 import ecdsa
 from ecdsa import SigningKey
 from transaction import Transaction
-from blockchain import BlockChain, Block, Ledger
+from blockchain import BlockChain, Block
 from merkle_tree import verify_proof
 from flask import Flask, request
 from multiprocessing import Process, Queue
@@ -12,10 +12,43 @@ import sys
 import pickle
 import json
 import requests
+import random
 
 app = Flask(__name__)
 user = None
 block_header_queue = Queue()
+
+# Parsing arguments when entered via CLI
+def parse_arguments(argv):
+    inputfile = ''
+    list_of_miner_ip = []
+    wallet_arg=None
+    try:
+        opts, args = getopt.getopt(
+            argv, "hp:i:w:", ["port=", "iminerfile=", "wallet="])
+    # Only port and input is mandatory
+    except getopt.GetoptError:
+        print('miner.py -p <port> -i <inputfile of list of IPs of other miners> -w <hashed public key of SPVClient>')
+        sys.exit(2)
+
+    for opt, arg in opts:
+        if opt == '-h':
+            print('miner.py -p <port> -i <inputfile of list of IPs of other miners> -w <hashed public key of SPVClient>')
+            sys.exit()
+
+        elif opt in ("-p", "--port"):
+            my_port = arg
+
+        elif opt in ("-i", "--iminerfile"):
+            inputfile = arg
+            f = open(inputfile, "r")
+            for line in f:
+                list_of_miner_ip.append(line)
+
+        elif opt in ("-w", "--wallet"):
+            wallet_arg = arg
+
+    return my_port, list_of_miner_ip, wallet_arg
 
 MY_PORT, LIST_OF_MINER_IP, WALLET = parse_arguments(sys.argv[1:])
 
@@ -67,37 +100,6 @@ class SPVClient:
     def check_balance(self, ledger):
         balance = getBalance(self.PUBLIC_KEY)
         return balance
-
-# Parsing arguments when entered via CLI
-def parse_arguments(argv):
-    inputfile = ''
-    list_of_miner_ip = []
-    try:
-        opts, args = getopt.getopt(
-            argv, "hp:i:w:", ["port=", "iminerfile=", "wallet="])
-    # Only port and input is mandatory
-    except getopt.GetoptError:
-        print('miner.py -p <port> -i <inputfile of list of IPs of other miners> -w <hashed public key of SPVClient>')
-        sys.exit(2)
-
-    for opt, arg in opts:
-        if opt == '-h':
-            print('miner.py -p <port> -i <inputfile of list of IPs of other miners> -w <hashed public key of SPVClient>')
-            sys.exit()
-
-        elif opt in ("-p", "--port"):
-            my_port = arg
-
-        elif opt in ("-i", "--iminerfile"):
-            inputfile = arg
-            f = open(inputfile, "r")
-            for line in f:
-                list_of_miner_ip.append(line)
-
-        elif opt in ("-w", "--wallet"):
-            wallet_arg = arg
-
-    return my_port, list_of_miner_ip, wallet_arg
 
 
 @app.route('/')
@@ -157,6 +159,14 @@ def createTransaction():
 @app.route('/clientCheckBalance', methods=['GET'])
 def clientCheckBalance():
     return user.check_balance(Ledger)
+
+@app.route('/verify_transaction', methods=['POST'])
+def verify_Transaction():
+    data = request.data.decode()
+    # requests.post(url, headers=headers, data=
+    miner_ip = random.choice(LIST_OF_MINER_IP)
+    requests.post("http://"+ miner_ip + "/verify_transaction_from_spv", data=data)
+    return None
     
 
 if __name__ == '__main__':
