@@ -27,7 +27,7 @@ def parse_arguments(argv):
     wallet_arg=None
     try:
         opts, args = getopt.getopt(
-            argv, "hp:i:w:", ["port=", "iminerfile=", "wallet="])
+            argv, "hp:m:w:", ["port=", "iminerfile=", "wallet="])
     # Only port and input is mandatory
     except getopt.GetoptError:
         print('miner.py -p <port> -i <inputfile of list of IPs of other miners> -w <hashed public key of SPVClient>')
@@ -41,18 +41,25 @@ def parse_arguments(argv):
         elif opt in ("-p", "--port"):
             my_port = arg
 
-        elif opt in ("-i", "--iminerfile"):
+        elif opt in ("-m", "--iminerfile"):
             inputfile = arg
             f = open(inputfile, "r")
             for line in f:
                 list_of_miner_ip.append(line)
 
         elif opt in ("-w", "--wallet"):
-            wallet_arg = arg
+            if arg != "NO_WALLET":
+                private_key = arg
 
-    return my_port, list_of_miner_ip, wallet_arg
+    return my_port, list_of_miner_ip, private_key
 
-MY_PORT, LIST_OF_MINER_IP, WALLET = parse_arguments(sys.argv[1:])
+MY_PORT, LIST_OF_MINER_IP, PRIVATE_KEY = parse_arguments(sys.argv[1:])
+
+if PRIVATE_KEY is None:
+    PRIVATE_KEY = ecdsa.SigningKey.generate()
+PUBLIC_KEY = PRIVATE_KEY.get_verifying_key()
+PUBLIC_KEY_STRING = PUBLIC_KEY.to_string().hex()
+print(PUBLIC_KEY_STRING)
 
 class SPVClient:
     '''

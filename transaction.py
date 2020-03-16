@@ -30,8 +30,8 @@ class Transaction:
         Serializes object to JSON string
         '''
         json_dict = dict()
-        json_dict['sender'] = self.sender.to_string().hex()
-        json_dict['receiver'] = self.receiver.to_string().hex()
+        json_dict['sender'] = binascii.hexlify(self.sender.to_string()).decode()
+        json_dict['receiver'] = binascii.hexlify(self.receiver.to_string()).decode()
         json_dict['amount'] = str(self.amount)
         json_dict['comment'] = self.comment
         json_dict['time'] = str(self.time)

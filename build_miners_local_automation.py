@@ -108,5 +108,7 @@ for i in list_of_miner_ips:
 f.close()
 
 for count, i in enumerate(list_of_spv_ports):
-    os.system("python3 SPVClient.py -p {0} -m partner_miner_ip.txt -w {1}&".format(
+    os.system("python3 SPVClient.py -p {0} -m miner_ip.txt -w {1}&".format(
             i, "WALLET_KEY"))
+time.sleep(5)
+os.system('rm miner_ip.txt')
