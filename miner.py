@@ -102,6 +102,14 @@ PUBLIC_KEY = PRIVATE_KEY.get_verifying_key()
 PUBLIC_KEY_STRING = binascii.hexlify(PUBLIC_KEY.to_string()).decode()
 print(PUBLIC_KEY_STRING)
 
+#testing
+private_one = ecdsa.SigningKey.generate()
+private_two = ecdsa.SigningKey.generate()
+private_three = ecdsa.SigningKey.generate()
+
+TEST_LIST=[Transaction(private_one,private_one.get_verifying_key(),200, sender_pk = private_one ),Transaction(private_two,private_two.get_verifying_key(),150, sender_pk = private_two),
+                Transaction(private_three,private_three.get_verifying_key(),450, sender_pk=private_three)]
+
 class Miner:
     def __init__(self, blockchain):
         self.blockchain = copy.deepcopy(blockchain)
@@ -134,6 +142,7 @@ class Miner:
             self.reset_new_mine()
     
     def create_merkle(self, transaction_queue):
+        print("entered create merkel")
         block = self.blockchain.last_block()
         if block is None:
             ledger = Ledger()
@@ -144,10 +153,14 @@ class Miner:
         while not transaction_queue.empty():
             list_of_raw_transactions.append(
                 transaction_queue.get())
-        for transaction in list_of_raw_transactions:
+        print("length",len(list_of_raw_transactions))
+        # for transaction in list_of_raw_transactions:
+        for transaction in TEST_LIST:
+            print("entering verify")
             # TODO: check if transaction makes sense in the ledger
-            if ledger.verify_transaction(transaction, list_of_validated_transactions, block.transactions.leaf_set, block.previous_header_hash):
+            if ledger.verify_transaction(transaction, list_of_validated_transactions, block.transactions.leaf_set, block.previous_header_hash, self.blockchain):
                 list_of_validated_transactions.append(transaction)
+                print("verification complete")
         merkletree = MerkleTree()
         # TODO: Add coinbase TX
         ### CHECK SENDER
@@ -155,10 +168,7 @@ class Miner:
         coinbase_sender_vk = coinbase_sender_pk.get_verifying_key()
         merkletree.add(Transaction(coinbase_sender_vk,PUBLIC_KEY,100, sender_pk= coinbase_sender_pk).to_json())
         ledger.coinbase_transaction(PUBLIC_KEY)
-<<<<<<< HEAD
-=======
         # print("merkel tree has been created" + json.dumps(ledger.balance))
->>>>>>> 30c6bf06616b234b1e97d7b02d96614e233ced1f
 
         for transaction in list_of_validated_transactions:
             merkletree.add(transaction.to_json())
@@ -209,6 +219,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
         #merkletree, ledger = create_sample_merkle()
         #create a merkel tree from transaction queue
         merkletree, ledger = miner.create_merkle(transaction_queue)
+        print("merkel created")
 
         while True:
             # print(LIST_OF_MINER_IP)
