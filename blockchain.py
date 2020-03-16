@@ -189,11 +189,10 @@ class BlockChain:
         not_sent = True
         for miner_ip in self.miner_ips:
             for transaction in transactions:
-                data = pickle.dumps(transaction, protocol=2)
                 while not_sent:
                     try:
                         requests.post("http://"+miner_ip +
-                                    "/transaction", data=data)
+                                    "/transaction", data=transaction)
                         not_sent = False
                     except:
                         time.sleep(0.1)
@@ -313,14 +312,18 @@ class Ledger:
     def verify_transaction(self, new_transaction, validated_transactions, transactions, prev_header_hash, blockchain):
         print("entered verify transactions ledger")
         transactions = copy.deepcopy(transactions)
+        validated_transactions = copy.deepcopy(validated_transactions)
         #change transactions to Transaction objects
-        new_transaction
+        # new_transaction
         # try:
         #     new_transaction = Transaction.from_json(new_transaction)
         # except:
         #     pass
         for i, transaction in enumerate(validated_transactions):
-            validated_transactions[i] = Transaction.from_json(transaction)
+            try:
+                validated_transactions[i] = Transaction.from_json(transaction)
+            except:
+                validated_transactions[i] = transaction
         
         #check whether sender is in ledger
         if new_transaction.sender_vk not in self.balance:

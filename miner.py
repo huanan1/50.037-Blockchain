@@ -365,7 +365,11 @@ def verify_Transaction(txid):
                 proof_bytes = merkle_tree.get_proof(j.decode())
                 proof_string = []
                 for k in proof_bytes:
-                    proof_string.append([k[0], binascii.hexlify(k[1]).decode()])
+                    if k is None:
+                        proof_string.append("None")
+                    else:
+                        proof_string.append(
+                        [k[0], binascii.hexlify(k[1]).decode()])
                 root_bytes = merkle_tree.get_root()
                 root_string = binascii.hexlify(root_bytes).decode()
                 reply = {"entry": j.decode(), "proof": proof_string, "root": root_string, "verify": verify_proof(
@@ -390,7 +394,11 @@ def verify_transaction_from_spv():
                 proof_bytes = merkle_tree.get_proof(j.decode())
                 proof_string = []
                 for k in proof_bytes:
-                    proof_string.append([k[0], binascii.hexlify(k[1]).decode()])
+                    if k is None:
+                        proof_string.append("None")
+                    else:
+                        proof_string.append(
+                        [k[0], binascii.hexlify(k[1]).decode()])
                 root_bytes = merkle_tree.get_root()
                 root_string = binascii.hexlify(root_bytes).decode()
                 # print ("verify", verify_proof(j.decode(), proof_bytes, root_bytes))
@@ -459,31 +467,43 @@ def request_block(header_hash):
 def request_account_balance(public_key):
     blockchain_request_queue.put(None)
     ledger = blockchain_reply_queue.get()[2]
+    print(ledger)
     return jsonify(ledger[public_key])
 
 
 @app.route('/send_transaction')
 def request_send_transaction():
-    receiver_public_key = request.args.get('receiver_public_key', '')
+    receiver_public_key = request.args.get('receiver', '')
     amount = request.args.get('amount', '')
-    # TODO Send to all miners
     new_transaction = Transaction(
         PUBLIC_KEY, receiver_public_key, int(amount), sender_pk=PRIVATE_KEY)
     # broadcast to all known miners
     # print(new_transaction)
     # data = pickle.dumps(new_transaction, protocol=2)
+
     for miner in LIST_OF_MINER_IP:
+        not_sent = True
         # execute post request to broadcast transaction
-        requests.post(
-            url=miner + "/transaction",
-            data=new_transaction.to_json()
-        )
-    # # TODO Add to own transaction queue
-    requests.post(
-        url="http://127.0.0.1:" + MY_PORT + "/transaction",
-        data=new_transaction.to_json()
-    )
-    return ""
+        while not_sent:
+            try:
+                requests.post(
+                    url="http://" + miner + "/transaction",
+                    data=new_transaction.to_json()
+                )
+                not_sent = False
+            except:
+                time.sleep(0.1)
+    not_sent = True
+    while not_sent:
+        try:
+            requests.post(
+                url="http://127.0.0.1:" + MY_PORT + "/transaction",
+                data=new_transaction.to_json()
+            )
+            not_sent = False
+        except:
+            time.sleep(0.1)
+    return jsonify(new_transaction.to_json())
 
 
 if __name__ == '__main__':

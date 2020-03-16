@@ -8,7 +8,7 @@ import copy
 
 class Transaction:
 
-    def __init__(self, sender_vk, receiver_vk, amount, comment="", time=time.time(), txid="", sig=b"", sender_pk=None):
+    def __init__(self, sender_vk, receiver_vk, amount, comment="", time_=None, txid="", sig=b"", sender_pk=None):
         try:
             # need to do hexlify and decode to change public key to string format during instantiation
             self.sender_vk = binascii.hexlify(sender_vk.to_string()).decode()
@@ -20,11 +20,14 @@ class Transaction:
             self.receiver_vk = binascii.hexlify(receiver_vk.to_string()).decode()
         except:
             self.receiver_vk = receiver_vk # verifying key
+        print(self.receiver_vk)
         self.sender_pk = sender_pk  # private key
         assert amount > 0
         self.amount = amount
         self.comment = comment
-        self.time = time
+        if time_ is None:
+            time_ = time.time()
+        self.time = time_
         self.txid = self.generate_txid()
         if sig == b"":
             self.sig = self.sign()
