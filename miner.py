@@ -100,7 +100,7 @@ MY_PORT, LIST_OF_MINER_IP, LIST_OF_SPV_IP, COLOR, MODE, SELFISH, PRIVATE_KEY, DO
 if PRIVATE_KEY is None:
     PRIVATE_KEY = ecdsa.SigningKey.generate()
 PUBLIC_KEY = PRIVATE_KEY.get_verifying_key()
-PUBLIC_KEY_STRING = PUBLIC_KEY.to_string().hex()
+PUBLIC_KEY_STRING = binascii.hexlify(PUBLIC_KEY.to_string()).decode()
 print(PUBLIC_KEY_STRING)
 
 class Miner:
@@ -157,7 +157,9 @@ class Miner:
         merkletree = MerkleTree()
         # TODO: Add coinbase TX
         ### CHECK SENDER
-        merkletree.add(Transaction(ecdsa.SigningKey.generate().get_verifying_key(),PUBLIC_KEY,100).to_json())
+        coinbase_sender_pk = SigningKey.generate()
+        coinbase_sender_vk = coinbase_sender_pk.get_verifying_key()
+        merkletree.add(Transaction(coinbase_sender_vk,PUBLIC_KEY,100, sender_pk= coinbase_sender_pk).to_json())
         ledger.coinbase_transaction(PUBLIC_KEY)
         print("merkel tree has been created" + json.dumps(ledger.balance))
 
@@ -171,14 +173,12 @@ class Miner:
 def create_sample_merkle():
     merkletree = MerkleTree()
     from ecdsa import SigningKey
-    sender = SigningKey.generate()
-    sender_vk = sender.get_verifying_key()
-    receiver = SigningKey.generate()
-    receiver_vk = receiver.get_verifying_key()
+    coinbase_sender_pk = SigningKey.generate()
+    coinbase_sender_vk = coinbase_sender_pk.get_verifying_key()
     for i in range(10):
         if i == 0:
             # coinbase
-            merkletree.add(Transaction(sender_vk, receiver_vk, 100).to_json())
+            merkletree.add(Transaction(coinbase_sender_vk, PUBLIC_KEY, 100, sender_pk=coinbase_sender_pk).to_json())
         # merkletree.add(Transaction(sender_vk, receiver_vk, random.randint(100, 1000)).to_json())
     merkletree.build()
     return merkletree
