@@ -72,6 +72,11 @@ def broadcast_transaction(transaction):
             time.sleep(0.1)
     return True
 
+def find_next_block_in_fork(prev_hash):
+    # prev_header_hash == trigger_hash
+    # and not self.cleaned_keys[3]
+    pass
+
 def start_mining(block_queue, transaction_queue):
     blockchain = BlockChain([args.ip_other])
     miner = Miner(blockchain, public_key)
@@ -86,6 +91,7 @@ def start_mining(block_queue, transaction_queue):
     trigger_block = 3
     trigger_block_hash = ""
     mine_from_trigger_block = False
+    private_last_hash = ""
 
     while True:
         merkletree, ledger = miner.create_merkle(transaction_queue)
@@ -103,20 +109,20 @@ def start_mining(block_queue, transaction_queue):
                 ignore_transactions.append(bad_tx)
                 tx_sent = True
                 # take the hash of the block before the bad_tx
-                trigger_block_hash = blockchain.cleaned_keys[2]
+                private_last_hash = blockchain.cleaned_keys[2]
                 # set last hash to trigger block hash so it starts mining from there
-                blockchain.last_hash = trigger_block_hash
+                blockchain.last_hash = private_last_hash
                 mine_from_trigger_block = True
 
             # if attack starts, slow down honest miner
             if not args.attacker and start_attack:
                 if skip_mine_count % 500 == 0:
                     miner_status = miner.mine(merkletree, ledger)
-                    skip_mine_count = 0 # keep range of skip_mine_count within (0,10]
+                    skip_mine_count = 0 # keep range of skip_mine_count within (0,500]
                 skip_mine_count+=1
             elif args.attacker and mine_from_trigger_block:
-                miner_status = miner.mine_from_old_block(merkletree, ledger, trigger_block_hash)
-                mine_from_trigger_block = miner_status 
+                # print("mining from old block")
+                miner_status = miner.mine_from_old_block(merkletree, ledger, private_last_hash)
             else:
                 # mine normally if no attack or if attacker
                 miner_status = miner.mine(merkletree, ledger)
@@ -124,6 +130,9 @@ def start_mining(block_queue, transaction_queue):
             mine_or_recv = ""
             # Check if mine is successful
             if miner_status:
+                if mine_from_trigger_block:
+                    # update private_last_hash
+                    pass
                 mine_or_recv = "Block MINED "
                 sending_block = blockchain.last_block()
                 mine_or_recv += binascii.hexlify(sending_block.header_hash()).decode()
