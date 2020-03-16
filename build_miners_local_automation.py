@@ -11,26 +11,30 @@ import getopt
 
 def parse_arguments(argv):
     selfish = False
+    double_spending_attack = False
     mode = 1
     try:
         opts, args = getopt.getopt(
-            argv, "hs:", ["selfish="])
+            argv, "hf:a:", ["selfish=", "double_spending_attack="])
     # Only port and input is mandatory
     except getopt.GetoptError:
-        print('build_miners_local_automation.py -s <1 if one selfish miner>')
+        print('build_miners_local_automation.py -f <1 if one selfish miner> -a <1 if double-spending attack>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('build_miners_local_automation.py -s <1 if one selfish miner>')
+            print('build_miners_local_automation.py -f <1 if one selfish miner> -a <1 if double-spending attack>')
             sys.exit()
-        elif opt in ("-s", "--selfish"):
+        elif opt in ("-f", "--selfish"):
             if arg == "1":
                 selfish = True
-    return selfish
+        elif opt in ("-a", "--attack"):
+            if arg == "1":
+                double_spending_attack = True
+    return selfish, double_spending_attack
 
 
 # deploys single selfish miner if true
-SELFISH = parse_arguments(sys.argv[1:])
+SELFISH, DOUBLE_SPENDING_ATTACK = parse_arguments(sys.argv[1:])
 
 # Reads LOCAL ports to use via miner_ports.txt
 f = open("miner_ports.txt", "r")
@@ -80,16 +84,20 @@ for count, i in enumerate(list_of_miner_ports):
         f.write(j+"\n")
     f.close()
     # Reads file
-    if not SELFISH:
+    if DOUBLE_SPENDING_ATTACK:
+        if count < 2: # only have two miners in double-spending attack demo
+            os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2 -a 1&".format(
+                i, colors[count % len(colors)], list_of_miner_wallets[count]))
+    elif not SELFISH:
         os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(
             i, colors[count % len(colors)], list_of_miner_wallets[count]))
     else:
         if count == 0:
-            os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2 -s 1&".format(
-                i, colors[count % len(colors)]))
+            os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2 -f 1&".format(
+                i, colors[count % len(colors)], list_of_miner_wallets[count]))
         else:
             os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(
-                i, colors[count % len(colors)]))
+                i, colors[count % len(colors)], list_of_miner_wallets[count]))
     time.sleep(2)
     # Removes file for cleanup
     os.system('rm partner_miner_ip.txt')
@@ -100,5 +108,7 @@ for i in list_of_miner_ips:
 f.close()
 
 for count, i in enumerate(list_of_spv_ports):
-    os.system("python3 SPVClient.py -p {0} -m partner_miner_ip.txt -w {1}&".format(
+    os.system("python3 SPVClient.py -p {0} -m miner_ip.txt -w {1}&".format(
             i, "WALLET_KEY"))
+time.sleep(5)
+os.system('rm miner_ip.txt')

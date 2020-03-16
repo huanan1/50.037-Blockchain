@@ -1,10 +1,11 @@
 import ecdsa
 from ecdsa import SigningKey
 from transaction import Transaction
-from blockchain import BlockChain, Block, SPVBlock#, Ledger
+from blockchain import BlockChain, Block
 from merkle_tree import verify_proof
 from flask import Flask, request, jsonify
 from multiprocessing import Process, Queue
+from merkle_tree import verify_proof
 
 import binascii
 import time
@@ -13,7 +14,7 @@ import sys
 import pickle
 import json
 import requests
-import copy 
+import random
 
 app = Flask(__name__)
 
@@ -48,7 +49,46 @@ def parse_arguments(argv):
 
     return my_port, list_of_miner_ip, wallet_arg
 
-MY_PORT, LIST_OF_MINER_IP, WALLET = parse_arguments(sys.argv[1:])
+# Parsing arguments when entered via CLI
+def parse_arguments(argv):
+    inputfile = ''
+    list_of_miner_ip = []
+    private_key=None
+    try:
+        opts, args = getopt.getopt(
+            argv, "hp:m:w:", ["port=", "iminerfile=", "wallet="])
+    # Only port and input is mandatory
+    except getopt.GetoptError:
+        print('miner.py -p <port> -i <inputfile of list of IPs of other miners> -w <hashed public key of SPVClient>')
+        sys.exit(2)
+
+    for opt, arg in opts:
+        if opt == '-h':
+            print('miner.py -p <port> -i <inputfile of list of IPs of other miners> -w <hashed public key of SPVClient>')
+            sys.exit()
+
+        elif opt in ("-p", "--port"):
+            my_port = arg
+
+        elif opt in ("-m", "--iminerfile"):
+            inputfile = arg
+            f = open(inputfile, "r")
+            for line in f:
+                list_of_miner_ip.append(line)
+
+        elif opt in ("-w", "--wallet"):
+            if arg != "NO_WALLET":
+                private_key = arg
+
+    return my_port, list_of_miner_ip, private_key
+
+MY_PORT, LIST_OF_MINER_IP, PRIVATE_KEY = parse_arguments(sys.argv[1:])
+
+if PRIVATE_KEY is None:
+    PRIVATE_KEY = ecdsa.SigningKey.generate()
+PUBLIC_KEY = PRIVATE_KEY.get_verifying_key()
+PUBLIC_KEY_STRING = PUBLIC_KEY.to_string().hex()
+print(PUBLIC_KEY_STRING)
 
 user = None
 block_header_queue = Queue()
@@ -102,10 +142,6 @@ class SPVClient:
     #     balance = getBalance(self.PUBLIC_KEY)
     #     return balance
 
-    def resolve(self, ):
-        merkle_path = BlockChain.resolve()
-        return merkle_path
-
 
 @app.route('/')
 def homepage():
@@ -153,37 +189,21 @@ def createTransaction():
         return 'wrong format of transaction sent'
 
 
-# To check the latest ledger from latest block.
-# @app.route('/clientCheckBalance', methods=['GET'])
-# def clientCheckBalance():
-#     return user.check_balance(Ledger)
-
-@app.route('/send_transaction?receiver=<receiver_public_key>&amount=<amount>')
-def request_send_transaction(receiver_public_key, amount):
-    # TODO Send to all miners
-    new_transaction = Transaction(receiver_public_key, amount)
-    # broadcast to all known miners
-    for miner in LIST_OF_MINER_IP:
-        # execute post request to broadcast transaction
-        requests.post(
-            url=miner + "/transaction",
-            txn=new_transaction
-        )
-    # TODO Add to own transaction queue
-    transaction_queue.put(new_transaction)
+# To check the latest ledger frmo latest block.
+#TODO: Update this part when ledger component is done!!
+@app.route('/clientCheckBalance', methods=['GET'])
+def clientCheckBalance():
+    return user.check_balance(Ledger)
 
 @app.route('/verify_transaction/<txid>', methods=['GET'])
 def verify_Transaction(txid):
     # requests.post(url, headers=headers, data=
-    #TODO: Check with every miner and make sure that more than 51% instead of random miner
-    #for miner in LIST_OF_MINER_IP:
-        
     miner_ip = random.choice(LIST_OF_MINER_IP)
     print(miner_ip, txid)
+    # try:
     response = json.loads(requests.post("http://"+ miner_ip + "/verify_transaction_from_spv", data=txid).text)
     print(response)
     entry = response["entry"]
-    print(entry)
     proof_string = response["proof"]
     proof_bytes = []
     for i in proof_string:
@@ -193,7 +213,6 @@ def verify_Transaction(txid):
     verify = verify_proof(entry, proof_bytes, root_bytes)
     if verify:
         # TODO check if entry has the same TXID
-        
         # TODO Check if the root is actually in blockchain
         reply = {"Confirmations": 5, "Block_header": "Blah blah"}
         return jsonify(reply)
