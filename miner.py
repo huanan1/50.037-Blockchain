@@ -135,25 +135,20 @@ class Miner:
             self.reset_new_mine()
     
     def create_merkle(self, transaction_queue):
-    #### not sure how to get the blockchain object here
         block = self.blockchain.last_block()
         if block is None:
             ledger = Ledger()
-            print("ledger for genesis block")
         else:
             ledger = block.ledger
-            print("ledger for non-genesis block: " + json.dumps(block.ledger.balance))
         list_of_raw_transactions = []
         list_of_validated_transactions = []
         while not transaction_queue.empty():
             list_of_raw_transactions.append(
                 transaction_queue.get())
-            print("list of raw transactions: " + str(list_of_raw_transactions))
         for transaction in list_of_raw_transactions:
             # TODO: check if transaction makes sense in the ledger
             if ledger.verify_transaction(transaction, list_of_validated_transactions, block.transactions.leaf_set, block.previous_header_hash):
                 list_of_validated_transactions.append(transaction)
-                print("list of validated transactions: " +str(list_of_validated_transactions))
         merkletree = MerkleTree()
         # TODO: Add coinbase TX
         ### CHECK SENDER
@@ -161,7 +156,6 @@ class Miner:
         coinbase_sender_vk = coinbase_sender_pk.get_verifying_key()
         merkletree.add(Transaction(coinbase_sender_vk,PUBLIC_KEY,100, sender_pk= coinbase_sender_pk).to_json())
         ledger.coinbase_transaction(PUBLIC_KEY)
-        print("merkel tree has been created" + json.dumps(ledger.balance))
 
         for transaction in list_of_validated_transactions:
             merkletree.add(transaction.to_json())
@@ -301,8 +295,8 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                     print("Received request of blockchain")
                     blockchain_request_queue.get()
                     print(blockchain.last_block())
-                    #ERROR block object is empty.
                     print(blockchain.retrieve_ledger())
+
                     blockchain_reply_queue.put((copy.deepcopy(blockchain.cleaned_keys), copy.deepcopy(blockchain.chain),
                         copy.deepcopy(blockchain.retrieve_ledger())))
         # Section run if the miner found a block or receives a block that has been broadcasted
