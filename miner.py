@@ -20,6 +20,10 @@ from merkle_tree import MerkleTree, verify_proof
 
 
 app = Flask(__name__)
+# This section is to get rid of Flask logging messages
+import logging
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 
 # Parsing arguments when entered via CLI
 
@@ -148,7 +152,7 @@ class Miner:
             self.reset_new_mine()
 
     def create_merkle(self, transaction_queue):
-        print("entered create merkel")
+        # print("entered create merkel")
         block = self.blockchain.last_block()
         if block is None:
             ledger = Ledger()
@@ -161,10 +165,10 @@ class Miner:
         while not transaction_queue.empty():
             list_of_raw_transactions.append(
                 transaction_queue.get())
-        print("length", len(list_of_raw_transactions))
+        # print("length", len(list_of_raw_transactions))
         for transaction in list_of_raw_transactions:
             # for transaction in TEST_LIST:
-            print("entering verify")
+            # print("entering verify")
             # TODO: check if transaction makes sense in the ledger
             if ledger.verify_transaction(transaction, list_of_validated_transactions, block.transactions.leaf_set, block.previous_header_hash, self.blockchain):
                 list_of_validated_transactions.append(transaction)
@@ -230,7 +234,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
         #merkletree, ledger = create_sample_merkle()
         # create a merkel tree from transaction queue
         merkletree, ledger = miner.create_merkle(transaction_queue)
-        print("merkel created")
+        # print("merkel created")
 
         while True:
             # print(LIST_OF_MINER_IP)
@@ -280,8 +284,6 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                         mine_or_recv += "SENDING SELFISH BLOCKS\n"
                         for block in list_of_blocks_selfish:
                             block_data = pickle.dumps(block, protocol=2)
-                            spv_block_data = pickle.dumps(
-                                SPVBlock(block), protocol=2)
                             for miner_ip in LIST_OF_MINER_IP:
                                 send_failed = True
                                 # Retry until peer receives, idk i think prof say ok right? assume all in stable network lel
@@ -289,16 +291,6 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                                     try:
                                         requests.post("http://"+miner_ip +
                                                       "/block", data=block_data)
-                                        send_failed = False
-                                    except:
-                                        time.sleep(0.1)
-                            for spv_ip in LIST_OF_SPV_IP:
-                                send_failed = True
-                                # Retry until peer receives, idk i think prof say ok right? assume all in stable network lel
-                                while send_failed:
-                                    try:
-                                        requests.post("http://"+spv_ip +
-                                                      "/block_header", data=spv_block_data)
                                         send_failed = False
                                     except:
                                         time.sleep(0.1)
@@ -472,7 +464,10 @@ def request_account_balance(public_key):
     blockchain_request_queue.put(None)
     ledger = blockchain_reply_queue.get()[2]
     print(ledger)
-    return jsonify(ledger[public_key])
+    try:
+        return jsonify(ledger[public_key])
+    except:
+        return "Cannot find account"
 
 
 @app.route('/send_transaction')

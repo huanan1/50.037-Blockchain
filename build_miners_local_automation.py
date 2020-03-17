@@ -102,5 +102,5 @@ for count, i in enumerate(list_of_miner_ports):
 for count, i in enumerate(list_of_spv_ports):
     os.system("python3 SPVClient.py -p {0} -m miner_ip.txt -w {1}&".format(
             i, "WALLET_KEY"))
-time.sleep(5)
+time.sleep(1*(len(list_of_miner_ports)+ len(list_of_spv_ports)))
 os.system('rm miner_ip.txt')

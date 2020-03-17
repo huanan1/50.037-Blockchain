@@ -64,7 +64,7 @@ class BlockChain:
         check1 = self.validate(block)
         # check if transactions are valid (sender has enough money, and TXIDs have not appeared in the previous blocks)
         check2 = self.verify_transactions(copy.deepcopy(block.transactions.leaf_set), block.previous_header_hash)
-        print(check1, check2)
+        # print(check1, check2)
         return check1 and check2
 
     def network_add(self, block):
@@ -86,14 +86,14 @@ class BlockChain:
             self.chain[header_hash] = block
             # check rejected blocks
             time.sleep(0.05)
-            print("looking through cached blocks...")
+            # print("looking through cached blocks...")
             self.network_add_cached_blocks(self.network_cached_blocks)
-            print("finished looking through cached blocks")
+            # print("finished looking through cached blocks")
             return True
         else:
-            print("\nSaved in cache: ", binascii.hexlify(block.header_hash()).decode(), self.chain)
+            # print("\nSaved in cache: ", binascii.hexlify(block.header_hash()).decode(), self.chain)
             self.network_cached_blocks[binascii.hexlify(block.header_hash()).decode()] = copy.deepcopy(block)
-            print(block.previous_header_hash)
+            # print(block.previous_header_hash)
             return False
     
     def network_add_cached_blocks(self,cached_blocks):
@@ -122,7 +122,7 @@ class BlockChain:
                 prev_hash_temp = self.chain[prev_hash_temp].previous_header_hash
                 chain_uptil_prev.append(prev_hash_temp)
             except KeyError:
-                print(f"there's no such hash: {prev_hash_temp} in the chain")
+                # print(f"there's no such hash: {prev_hash_temp} in the chain")
                 return False
             if prev_hash_temp == None:
                 chain_uptil_prev.append(prev_hash_temp)
@@ -310,7 +310,7 @@ class Ledger:
     #new_transaction, validated_transaction from create_merkel
     #transactions: validated transactions in existing blocks
     def verify_transaction(self, new_transaction, validated_transactions, transactions, prev_header_hash, blockchain):
-        print("entered verify transactions ledger")
+        # print("entered verify transactions ledger")
         transactions = copy.deepcopy(transactions)
         validated_transactions = copy.deepcopy(validated_transactions)
         #change transactions to Transaction objects
@@ -337,7 +337,7 @@ class Ledger:
         #check signature
         new_transaction.validate(new_transaction.sig)
 
-        print("CHECKING GET BALANCE "+ str(new_transaction.receiver_vk))
+        # print("CHECKING GET BALANCE "+ str(new_transaction.receiver_vk))
         
         #check whether txid exists in validated transactions
         for transaction in validated_transactions:
