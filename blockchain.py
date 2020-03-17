@@ -63,8 +63,7 @@ class BlockChain:
         # check again that incoming block has prev hash and target < nonce (in case malicious miner publishing invalid blocks)
         check1 = self.validate(block)
         # check if transactions are valid (sender has enough money, and TXIDs have not appeared in the previous blocks)
-        check2 = self.verify_transactions(copy.deepcopy(block.transactions.leaf_set), block.previous_header_hash)
-        # print(check1, check2)
+        check2 = self.verify_transactions(copy.deepcopy(block.transactions.leaf_set), block.previous_header_hash,block.ledger)
         return check1 and check2
 
     def network_add(self, block):
@@ -113,7 +112,7 @@ class BlockChain:
         if runAgain == True:
             self.network_add_cached_blocks(self.network_cached_blocks)
 
-    def verify_transactions(self, transactions, prev_header_hash):
+    def verify_transactions(self, transactions, prev_header_hash, ledger):
         # obtain blocks in blockchain uptil block with previous header hash
         prev_hash_temp = prev_header_hash
         chain_uptil_prev = [prev_header_hash]
@@ -131,6 +130,7 @@ class BlockChain:
         #     chain_uptil_prev = self.cleaned_keys[:self.cleaned_keys.index(prev_header_hash)+1]
         # except:
         #     return False
+
         # convert transactions to Transaction objects
         for i, transaction in enumerate(transactions):
             transactions[i] = Transaction.from_json(transaction)
@@ -159,8 +159,9 @@ class BlockChain:
             except AssertionError:
                 print("sender's signature is not valid")
             # check if sender has enough money
-            # if ledger.get_balance(transaction.sender) - transaction.amount < 0:
-                # return False
+
+            if ledger.get_balance(transaction.sender_vk) - transaction.amount < 0:
+                return False
         return True
 
     def add(self, block):
@@ -298,8 +299,6 @@ class Ledger:
             self.balance[public_key] = 100
         else:
             self.balance[public_key] += 100
-        # print("This is a coinbase transaction: " + json.dumps(self.balance))
-
 
     def get_balance(self, public_key):
         try:
@@ -310,15 +309,8 @@ class Ledger:
     #new_transaction, validated_transaction from create_merkel
     #transactions: validated transactions in existing blocks
     def verify_transaction(self, new_transaction, validated_transactions, transactions, prev_header_hash, blockchain):
-        # print("entered verify transactions ledger")
         transactions = copy.deepcopy(transactions)
         validated_transactions = copy.deepcopy(validated_transactions)
-        #change transactions to Transaction objects
-        # new_transaction
-        # try:
-        #     new_transaction = Transaction.from_json(new_transaction)
-        # except:
-        #     pass
         for i, transaction in enumerate(validated_transactions):
             try:
                 validated_transactions[i] = Transaction.from_json(transaction)
@@ -336,8 +328,6 @@ class Ledger:
         
         #check signature
         new_transaction.validate(new_transaction.sig)
-
-        # print("CHECKING GET BALANCE "+ str(new_transaction.receiver_vk))
         
         #check whether txid exists in validated transactions
         for transaction in validated_transactions:
@@ -345,7 +335,6 @@ class Ledger:
                 print(f"this transaction appeared before. Transaction: {transaction}")
                 return False
               
-        ###Huan an's
         # obtain blocks in blockchain uptil block with previous header hash
         prev_hash_temp = prev_header_hash
         chain_uptil_prev = [prev_header_hash]
@@ -385,123 +374,9 @@ class Ledger:
             except AssertionError:
                 print("sender's signature is not valid")
             # check if sender has enough money
-            # if ledger.get_balance(transaction.sender) - transaction.amount < 0:
-                # return False
+            if self.balance(transaction.sender_vk) - transaction.amount < 0:
+                return False
         
         self.update_ledger(new_transaction)
         print("Transaction has been verified: "+json.dumps(self.balance))
         return True
-
-# TODO Youngmin, so erm, it's a bit complex regarding the ledger
-# There has to be a copy of the ledger at every single block
-# This is to ensure that Huan An's validation code can work
-# I am not sure if you want to do a class, or a text file or something
-# I suggest putting the ledger in the Block object, so every Block has a copy
-# of the ledger, then when the new transactions come, you can pull out the latest
-# block, using Blockchain.last_block() will return you the latest block, so you will
-# have the latest ledger to be used here in the merkle_tree
-
-# There are 2 main checks to be done here
-# 1. The accounts involved have enough money to transact, depending on the ledger
-# 2. TXID (hash of transaction, not created yet) is not duplicated. I can't think of a way other than looking through EVERY transaction
-
-
-# Test
-def main():
-    # Create blockchain
-    blockchain = BlockChain([])
-    
-    #create ledger
-    ledger = Ledger()
-
-    # Genesis block
-    merkletree = MerkleTree()
-    for i in range(100):
-        merkletree.add(random.randint(100, 1000))
-    merkletree.build()
-    current_time = str(time.time())
-    for nonce in range(10000000):
-        block = Block(merkletree, None, merkletree.get_root(),
-                      current_time, nonce, ledger)
-        # If the add is successful, stop loop
-        if blockchain.add(block):
-            # block.ledger.coinbase_transaction("random public key ???")
-            break
-    print(blockchain)
-
-    # Other blocks (non-linear)
-    for i in range(6):
-        merkletree = MerkleTree()
-        for i in range(100):
-            merkletree.add(random.randint(100, 1000))
-        merkletree.build()
-        current_time = str(time.time())
-        last_hash = random.choice(
-            list(blockchain.chain.keys()))
-        for nonce in range(10000000):
-            block = Block(merkletree, last_hash,
-                          merkletree.get_root(), current_time, nonce)
-            if blockchain.add(block):
-                # If the add is successful, stop loop
-                break
-        print(blockchain)
-
-    blockchain.resolve()
-    print("Done resolve")
-    print(blockchain)
-
-def test_network_add():
-    # Create blockchain
-    blockchain = BlockChain([])
-
-    from ecdsa import SigningKey
-    sender = SigningKey.generate()
-    sender_vk = sender.get_verifying_key()
-    receiver = SigningKey.generate()
-    receiver_vk = receiver.get_verifying_key()
-
-    # Genesis block
-    ledger = Ledger()
-
-    merkletree = MerkleTree()
-    for i in range(1):
-        merkletree.add(Transaction(sender_vk, sender_vk, 100).to_json())
-        ledger.coinbase_transaction(sender_vk)
-    merkletree.build()
-    current_time = str(time.time())
-    for nonce in range(10000000):
-        block = Block(merkletree, None, merkletree.get_root(),
-                      current_time, nonce, ledger)
-        # If the add is successful, stop loop
-        if blockchain.validate(block):
-            blockchain.network_add(block)
-            break
-    print(blockchain)
-
-    # Other blocks (non-linear)
-    for i in range(2):
-        merkletree = MerkleTree()
-        for i in range(5):
-            if i == 0: merkletree.add(Transaction(sender_vk, sender_vk, 100).to_json())
-            else:
-                merkletree.add(Transaction(sender_vk, receiver_vk, random.randint(100,1000)).to_json())
-        merkletree.build()
-        current_time = str(time.time())
-        last_hash = random.choice(
-            list(blockchain.chain.keys()))
-        for nonce in range(10000000):
-            block = Block(merkletree, last_hash,
-                          merkletree.get_root(), current_time, nonce)
-            if blockchain.validate(block):
-                blockchain.network_add(block)
-                # If the add is successful, stop loop
-                break
-        print(blockchain)
-
-    blockchain.resolve()
-    print("Done resolve")
-    print(blockchain)
-
-
-if __name__ == '__main__':
-    test_network_add()
