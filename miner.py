@@ -465,7 +465,8 @@ def request_account_balance(public_key):
     ledger = blockchain_reply_queue.get()[2]
     print(ledger)
     try:
-        return jsonify(ledger[public_key])
+        reply = {"public_key": public_key, "amount": ledger[public_key]}
+        return jsonify(reply)
     except:
         return "Cannot find account"
 
