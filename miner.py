@@ -108,6 +108,8 @@ for count, i in enumerate(LIST_OF_MINER_IP):
 
 if PRIVATE_KEY is None:
     PRIVATE_KEY = ecdsa.SigningKey.generate()
+else:
+    PRIVATE_KEY = ecdsa.SigningKey.from_string(binascii.unhexlify(bytes(PRIVATE_KEY, 'utf-8')))
 PUBLIC_KEY = PRIVATE_KEY.get_verifying_key()
 PUBLIC_KEY_STRING = binascii.hexlify(PUBLIC_KEY.to_string()).decode()
 

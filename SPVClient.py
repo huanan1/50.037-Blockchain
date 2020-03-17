@@ -199,7 +199,7 @@ def clientCheckBalance():
 def verify_Transaction(txid):
     # requests.post(url, headers=headers, data=
     miner_ip = random.choice(LIST_OF_MINER_IP)
-    print(miner_ip, txid)
+    # print(miner_ip, txid)
     # try:
     response = json.loads(requests.post("http://"+ miner_ip + "/verify_transaction_from_spv", data=txid).text)
     print(response)
@@ -221,7 +221,16 @@ def verify_Transaction(txid):
         return jsonify(reply)
     # finally:
     return jsonify("TXID not found")
-    
+
+
+@app.route('/account_balance/<public_key>')
+def request_account_balance(public_key):
+    miner_ip = random.choice(LIST_OF_MINER_IP)
+    try:
+        response = json.loads(requests.get("http://"+ miner_ip + "/account_balance/" + public_key).text)
+        return jsonify(response)
+    except:
+        return "Cannot find account"
 
 if __name__ == '__main__':
     app.run(debug=True, use_reloader=False, port=MY_PORT)
