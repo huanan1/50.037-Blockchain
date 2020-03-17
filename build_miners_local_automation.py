@@ -73,42 +73,34 @@ for i in list_of_spv_ips:
     f.write(i+"\n")
 f.close()
 
-# Color args
-colors = ['w', 'r', 'g', 'y', 'b', 'm', 'c']
-for count, i in enumerate(list_of_miner_ports):
-    list_of_partner_miners = copy.deepcopy(list_of_miner_ips)
-    del list_of_partner_miners[count]
-    # Creates a file called partner_miner_ip.txt
-    f = open("partner_miner_ip.txt", "w+")
-    for j in list_of_partner_miners:
-        f.write(j+"\n")
-    f.close()
-    # Reads file
-    if DOUBLE_SPENDING_ATTACK:
-        if count < 2: # only have two miners in double-spending attack demo
-            os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2 -a 1&".format(
-                i, colors[count % len(colors)], list_of_miner_wallets[count]))
-    elif not SELFISH:
-        os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(
-            i, colors[count % len(colors)], list_of_miner_wallets[count]))
-    else:
-        if count == 0:
-            os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2 -f 1&".format(
-                i, colors[count % len(colors)], list_of_miner_wallets[count]))
-        else:
-            os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(
-                i, colors[count % len(colors)], list_of_miner_wallets[count]))
-    time.sleep(5)
-    # Removes file for cleanup
-    os.system('rm partner_miner_ip.txt')
-
 f = open("miner_ip.txt", "w+")
 for i in list_of_miner_ips:
     f.write(i+"\n")
 f.close()
 
+# Color args
+colors = ['w', 'r', 'g', 'y', 'b', 'm', 'c']
+for count, i in enumerate(list_of_miner_ports):
+    # Reads file
+    if DOUBLE_SPENDING_ATTACK:
+        if count < 2: # only have two miners in double-spending attack demo
+            os.system("python3 miner.py -p {0} -m miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2 -a 1&".format(
+                i, colors[count % len(colors)], list_of_miner_wallets[count]))
+    elif not SELFISH:
+        os.system("python3 miner.py -p {0} -m miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(
+            i, colors[count % len(colors)], list_of_miner_wallets[count]))
+    else:
+        if count == 0:
+            os.system("python3 miner.py -p {0} -m miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2 -f 1&".format(
+                i, colors[count % len(colors)], list_of_miner_wallets[count]))
+        else:
+            os.system("python3 miner.py -p {0} -m miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(
+                i, colors[count % len(colors)], list_of_miner_wallets[count]))
+    # Removes file for cleanup
+    
+
 for count, i in enumerate(list_of_spv_ports):
     os.system("python3 SPVClient.py -p {0} -m miner_ip.txt -w {1}&".format(
             i, "WALLET_KEY"))
-time.sleep(5)
+time.sleep(1*(len(list_of_miner_ports)+ len(list_of_spv_ports)))
 os.system('rm miner_ip.txt')
