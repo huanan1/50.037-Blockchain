@@ -31,7 +31,7 @@ There will be 2 miners in the double-spending demo.
 Demo instructions:
 1. Open 2 terminals
 2. Run this on the 1st terminal: python3 double_spend.py --port 25540 --ip_other 127.0.0.1:25541 --color g
-3. Run this on the 2nd terminal: python3 double_spend.py --port 22541 --ip_other 127.0.0.1:25540 --color r
+3. Run this on the 2nd terminal: python3 double_spend.py --port 22541 --ip_other 127.0.0.1:25540 --attacker --color r
 
 # POSSIBLE TODO
 - actually broadcast transaction
@@ -104,11 +104,11 @@ def start_mining(block_queue, transaction_queue, public_key, private_key):
     start_attack = False
     announced_attack = False
     cease_attacks = False
-    tx_sent = False
+    send_tx = False
     ignore_transactions = []
     private_fork = []
     skip_mine_count = 0
-    trigger_block = 1
+    trigger_block = 2
     trigger_block_hash = ""
     mine_private_blocks = False
     private_last_hash = ""
@@ -123,30 +123,37 @@ def start_mining(block_queue, transaction_queue, public_key, private_key):
 
         if not cease_attacks:
             start_attack = len(blockchain.cleaned_keys)>trigger_block
-            if args.attacker and start_attack and not announced_attack:
-                print("=============\nStart attack!\n============")
-                announced_attack = True
-        while True:
-            miner_status = False
+            # send a bad transaction after trigger_block number of blocks in chain
+            send_tx = len(blockchain.cleaned_keys)>=trigger_block
+
             # this if statement should only be True once
-            # start of attack
-            if args.attacker and start_attack and not tx_sent:
-                bad_tx = Transaction(public_key,SigningKey.generate().get_verifying_key(),50, "give me the goods", sender_pk=private_key).to_json().encode()
+            # send transaction with intent to double spend
+            if args.attacker and start_attack and send_tx:
+                bad_tx = Transaction(public_key,SigningKey.generate().get_verifying_key(),50, 
+                                    "give me the goods", sender_pk=private_key).to_json().encode()
                 print("sending transaction with intent to double-spend...")
                 # broadcast_transaction(bad_tx) # TODO unable to send, gets stuck in loop
                 print("sent transaction")
                 ignore_transactions.append(bad_tx)
-                tx_sent = True
+                send_tx = False
+
+        while True:
+            miner_status = False
+            # this if statement should only be True once
+            # start of attack
+            if args.attacker and start_attack and not announced_attack:
                 # take the hash of the block before the bad_tx
                 trigger_block_hash = blockchain.cleaned_keys[trigger_block]
                 private_last_hash = trigger_block_hash
                 try:
                     # used to track which blocks to ignore in trying to build new longest chain
                     original_blocks = copy.deepcopy(blockchain.cleaned_keys[trigger_block+1:])
+                    print("=============\nStart attack!\n============")
+                    announced_attack = True
                 except IndexError:
                     # IndexError happens if no new block was mined after trigger block
                     # include at least one element to prevent index error in acccessing original_blocks later
-                    original_blocks = ["000"]
+                    print("\n\n\n\n hmmmmm")
                 
                 # generate new public key and empty out balance from old public key
                 new_private_key = create_key()

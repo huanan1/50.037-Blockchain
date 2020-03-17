@@ -306,7 +306,7 @@ class Ledger:
             self.balance[public_key.to_string().hex()] = 100
         else:
             self.balance[public_key.to_string().hex()] += 100
-        print("This is a coinbase transaction: " + json.dumps(self.balance))
+        # print("This is a coinbase transaction: " + json.dumps(self.balance))
 
 
     def get_balance(self, public_key):
