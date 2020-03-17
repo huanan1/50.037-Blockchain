@@ -50,7 +50,7 @@ class Miner:
         if self.blockchain.network_add(block):
             self.reset_new_mine()
     
-    def create_merkle(self, transaction_queue):
+    def create_merkle(self, transaction_queue, tx_to_ignore=None):
     #### not sure how to get the blockchain object here
         block = self.blockchain.last_block()
         if block is None:
@@ -65,8 +65,12 @@ class Miner:
             list_of_raw_transactions.append(
                 transaction_queue.get())
             # print("list of raw transactions: " + str(list_of_raw_transactions))
+        
         for transaction in list_of_raw_transactions:
-            if ledger.verify_transaction(transaction, list_of_validated_transactions, block.transactions.leaf_set, block.previous_header_hash):
+            # remove tx_to_ignore from transaction queue
+            if tx_to_ignore is not None and transaction in tx_to_ignore:
+                print(f"ignoring transaction: {transaction}")
+            elif ledger.verify_transaction(transaction, list_of_validated_transactions, block.transactions.leaf_set, block.previous_header_hash):
                 list_of_validated_transactions.append(transaction)
                 # print("list of validated transactions: " +str(list_of_validated_transactions))
         merkletree = MerkleTree()

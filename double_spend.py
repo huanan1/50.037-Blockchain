@@ -22,13 +22,23 @@ Since attacker has >=51% hashing power, he will eventually have the longer chain
 on the other fork to be void.
 
 There will be 2 miners in the double-spending demo.
-1) Normal miner will mine at half the speed of an attacker (X)
+1) Normal miner will mine at half the speed of an attacker
 2) When chain reaches 3rd block, attacker publishes transaction from himself to another party
 3) Attacker stores that transaction in a list of transactions to ignore so it doesn't get included into his subsequent blocks
 4) Attacker starts private fork when transaction is in latest block
 5) Attacker publishes private fork when it is longer than current chain
 
-example of run command: python3 double_spend.py --port 25540 --ip_other 127.0.0.1:25541 --color g
+Demo instructions:
+1. Open 2 terminals
+2. Run this on the 1st terminal: python3 double_spend.py --port 25540 --ip_other 127.0.0.1:25541 --color g
+3. Run this on the 2nd terminal: python3 double_spend.py --port 22541 --ip_other 127.0.0.1:25540 --color r
+
+# POSSIBLE TODO
+- actually broadcast transaction
+- create new public key and send all money from old public key to new public key
+- use only new public key
+X reject creating merkle tree with transactions in ignore_transactions list
+- set trigger block to block with the broadcasted transactions
 '''
 
 app = Flask(__name__)
@@ -89,7 +99,7 @@ def start_mining(block_queue, transaction_queue):
     blockchain = BlockChain([args.ip_other])
     miner = Miner(blockchain, public_key)
     miner_status = False # whether miner is ready to send
-    # variables for double-spending attack
+    # variables for double-spending attack #
     start_attack = False
     announced_attack = False
     cease_attacks = False
@@ -97,25 +107,31 @@ def start_mining(block_queue, transaction_queue):
     ignore_transactions = []
     private_fork = []
     skip_mine_count = 0
-    trigger_block = 3
+    trigger_block = 1
     trigger_block_hash = ""
     mine_private_blocks = False
     private_last_hash = ""
     original_blocks = []
 
     while True:
-        merkletree, ledger = miner.create_merkle(transaction_queue)
+        if args.attacker and start_attack:
+            # make sure new blocks don't include the bad_tx from attacker
+            merkletree, ledger = miner.create_merkle(transaction_queue, tx_to_ignore=ignore_transactions)
+        else:
+            merkletree, ledger = miner.create_merkle(transaction_queue)
+
         if not cease_attacks:
             start_attack = len(blockchain.cleaned_keys)>trigger_block
             if args.attacker and start_attack and not announced_attack:
-                print("=============\nStart attack!\n===========")
+                print("=============\nStart attack!\n============")
                 announced_attack = True
         while True:
             miner_status = False
+            # this if statement will only be True once
             if args.attacker and start_attack and not tx_sent:
-                bad_tx = Transaction(public_key,SigningKey.generate().get_verifying_key(),50,"give me the goods", sender_pk=private_key).to_json()
+                bad_tx = Transaction(public_key,SigningKey.generate().get_verifying_key(),50, "give me the goods", sender_pk=private_key).to_json().encode()
                 print("sending transaction...")
-                ### broadcast_transaction(bad_tx) # TODO need to broadcast transaction?
+                # broadcast_transaction(bad_tx) # TODO unable to send, gets stuck in loop
                 print("sent transaction")
                 ignore_transactions.append(bad_tx)
                 tx_sent = True
@@ -126,7 +142,9 @@ def start_mining(block_queue, transaction_queue):
                     # used to track which blocks to ignore in trying to build new longest chain
                     original_blocks = copy.deepcopy(blockchain.cleaned_keys[trigger_block+1:])
                 except IndexError:
-                    pass
+                    # IndexError happens if no new block was mined after trigger block
+                    # include at least one element to prevent index error in acccessing original_blocks later
+                    original_blocks = ["0"]
 
             # if attack starts, slow down honest miner
             if not args.attacker and start_attack:
@@ -169,18 +187,14 @@ def start_mining(block_queue, transaction_queue):
                                 except:
                                     time.sleep(0.1)
                         private_fork = []
-                        try:
-                            if not check_block_in_chain(blockchain, original_blocks[0]):
-                                print("changing attack to False")
-                                # stop attack
-                                start_attack = False
-                                cease_attacks = True
-                            else:
-                                print("block to void:", original_blocks[0], "chain:", blockchain.cleaned_keys)
-                                print("block we want to void is still in chain! continuing attack...")
-                        except IndexError as e:
-                            print(e)
-                            print("length of blockchain:", len(blockchain))
+                        if not check_block_in_chain(blockchain, original_blocks[0]):
+                            print("changing attack to False")
+                            # stop attack
+                            start_attack = False
+                            cease_attacks = True
+                        else:
+                            print("block to void:", original_blocks[0], "chain:", blockchain.cleaned_keys)
+                            print("block we want to void is still in chain! continuing attack...")
 
                 else: # args.attacker and not start_attack or not args.attacker
                     sending_block = blockchain.last_block()
