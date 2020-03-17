@@ -137,12 +137,6 @@ class SPVClient:
         new_txn.sign(self.PRIVATE_KEY)
         return new_txn
 
-    #TODO: Is it this part need to accept prev header and current header?
-    # def check_balance(self, ledger):
-    #     balance = getBalance(self.PUBLIC_KEY)
-    #     return balance
-
-
 @app.route('/')
 def homepage():
     return ""

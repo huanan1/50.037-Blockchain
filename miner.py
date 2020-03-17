@@ -111,15 +111,6 @@ if PRIVATE_KEY is None:
 PUBLIC_KEY = PRIVATE_KEY.get_verifying_key()
 PUBLIC_KEY_STRING = binascii.hexlify(PUBLIC_KEY.to_string()).decode()
 
-# testing
-private_one = ecdsa.SigningKey.generate()
-private_two = ecdsa.SigningKey.generate()
-private_three = ecdsa.SigningKey.generate()
-
-# TEST_LIST=[Transaction(private_one,private_one.get_verifying_key(),200, sender_pk = private_one ),Transaction(private_two,private_two.get_verifying_key(),150, sender_pk = private_two),
-#                 Transaction(private_three,private_three.get_verifying_key(),450, sender_pk=private_three)]
-
-
 class Miner:
     def __init__(self, blockchain):
         self.blockchain = copy.deepcopy(blockchain)
@@ -190,38 +181,6 @@ class Miner:
         merkletree.build()
         # print(merkletree.leaf_set)
         return merkletree, ledger
-
-
-# # Random Merkletree
-# def create_sample_merkle():
-#     merkletree = MerkleTree()
-#     from ecdsa import SigningKey
-#     coinbase_sender_pk = SigningKey.generate()
-#     coinbase_sender_vk = coinbase_sender_pk.get_verifying_key()
-#     for i in range(10):
-#         if i == 0:
-#             # coinbase
-#             merkletree.add(Transaction(coinbase_sender_vk, PUBLIC_KEY, 100, sender_pk=coinbase_sender_pk).to_json())
-#         # merkletree.add(Transaction(sender_vk, receiver_vk, random.randint(100, 1000)).to_json())
-#     merkletree.build()
-#     return merkletree
-
-# TODO Youngmin, so erm, it's a bit complex regarding the ledger
-# There has to be a copy of the ledger at every single block
-# This is to ensure that Huan An's validation code can work
-# I am not sure if you want to do a class, or a text file or something
-# I suggest putting the ledger in the Block object, so every Block has a copy
-# of the ledger, then when the new transactions come, you can pull out the latest
-# block, using Blockchain.last_block() will return you the latest block, so you will
-# have the latest ledger to be used here in the merkle_tree
-
-# There are 2 main checks to be done here
-# 1. The accounts involved have enough money to transact, depending on the ledger
-# 2. TXID (hash of transaction, not created yet) is not duplicated. I can't think of a way other than looking through EVERY transaction
-
-# Creates a merkle tree by compiling all of the transactions in transaction_queue
-# Sends the merkle tree to be made into a Block object
-
 
 def start_mining(block_queue, transaction_queue, blockchain_request_queue, blockchain_reply_queue):
     blockchain = BlockChain(LIST_OF_MINER_IP)
