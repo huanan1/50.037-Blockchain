@@ -189,11 +189,10 @@ class BlockChain:
         not_sent = True
         for miner_ip in self.miner_ips:
             for transaction in transactions:
-                data = pickle.dumps(transaction, protocol=2)
                 while not_sent:
                     try:
                         requests.post("http://"+miner_ip +
-                                    "/transaction", data=data)
+                                    "/transaction", data=transaction)
                         not_sent = False
                     except:
                         time.sleep(0.1)
@@ -280,48 +279,65 @@ class Ledger:
         self.balance = dict()
 
     def update_ledger(self, transaction):
-        transaction = Transaction.from_json(transaction)
+        try:
+            transaction = Transaction.from_json(transaction)
+        except:
+            pass
         #add recipient to ledger if he doesn't exist
-        if transaction not in self.balance:
-            self.balance[transaction] = transaction.amount
+        if transaction.receiver_vk not in self.balance:
+            self.balance[transaction.receiver_vk] = transaction.amount
         else:
-            self.balance[transaction] += transaction.amount
+            self.balance[transaction.receiver_vk] += transaction.amount
 
         #don't have to check whether sender exists because it is done under verify_transaction
-        self.balance[transaction] -= transaction.amount
+        self.balance[transaction.receiver_vk] -= transaction.amount
       
 
     def coinbase_transaction(self, public_key):
-        if public_key.to_string().hex() not in self.balance:
-            self.balance[public_key.to_string().hex()] = 100
+        if public_key not in self.balance:
+            self.balance[public_key] = 100
         else:
-            self.balance[public_key.to_string().hex()] += 100
-        print("This is a coinbase transaction: " + json.dumps(self.balance))
+            self.balance[public_key] += 100
+        # print("This is a coinbase transaction: " + json.dumps(self.balance))
 
 
     def get_balance(self, public_key):
-        return self.balance[public_key.to_string().hex()]
+        try:
+            return self.balance[public_key]
+        except:
+            return 0
     
     #new_transaction, validated_transaction from create_merkel
     #transactions: validated transactions in existing blocks
-    def verify_transaction(self, new_transaction, validated_transactions, transactions, prev_header_hash):
-        
+    def verify_transaction(self, new_transaction, validated_transactions, transactions, prev_header_hash, blockchain):
+        print("entered verify transactions ledger")
+        transactions = copy.deepcopy(transactions)
+        validated_transactions = copy.deepcopy(validated_transactions)
         #change transactions to Transaction objects
-        new_transaction = Transaction.from_json(new_transaction)
+        # new_transaction
+        # try:
+        #     new_transaction = Transaction.from_json(new_transaction)
+        # except:
+        #     pass
         for i, transaction in enumerate(validated_transactions):
-            validated_transactions[i] = Transaction.from_json(transaction)
+            try:
+                validated_transactions[i] = Transaction.from_json(transaction)
+            except:
+                validated_transactions[i] = transaction
         
         #check whether sender is in ledger
-        if new_transaction.sender not in self.balance:
+        if new_transaction.sender_vk not in self.balance:
             return False
 
         #check whether there is sufficient balance in sender's account
-        if new_transaction.amount > self.get_balance(new_transaction.sender):
-            print(f"There is insufficient balance for transaction in account {new_transaction.sender}")
+        if new_transaction.amount > self.get_balance(new_transaction.sender_vk):
+            print(f"There is insufficient balance for transaction in account {new_transaction.sender_vk}")
             return False
         
         #check signature
         new_transaction.validate(new_transaction.sig)
+
+        print("CHECKING GET BALANCE "+ str(new_transaction.receiver_vk))
         
         #check whether txid exists in validated transactions
         for transaction in validated_transactions:
@@ -329,18 +345,31 @@ class Ledger:
                 print(f"this transaction appeared before. Transaction: {transaction}")
                 return False
               
-        self.blockchain.resolve()
+        ###Huan an's
         # obtain blocks in blockchain uptil block with previous header hash
-        chain_uptil_prev = self.blockchain.cleaned_keys[:self.blockchain.cleaned_keys.index(prev_header_hash)+1]
-
+        prev_hash_temp = prev_header_hash
+        chain_uptil_prev = [prev_header_hash]
+        while True:
+            try:
+                prev_hash_temp = blockchain.chain[prev_hash_temp].previous_header_hash
+                chain_uptil_prev.append(prev_hash_temp)
+            except KeyError:
+                print(f"there's no such hash: {prev_hash_temp} in the chain")
+                return False
+            if prev_hash_temp == None:
+                break
         for i, transaction in enumerate(transactions):
             transactions[i] = Transaction.from_json(transaction)
 
-        #check for existing transactions in previous blocks
-        # loop through all previous blocks 
+        # check coinbase transaction amount
+        if transactions[0].amount != 100:
+            print("the amt in the coinbase transaction is not 100")
+            return False
+        
+        # loop through all previous blocks
         for hash in reversed(chain_uptil_prev):
             prev_hash = prev_header_hash
-            prev_merkle_tree = self.blockchain.chain[prev_hash].transactions
+            prev_merkle_tree = blockchain.chain[prev_hash].transactions
             # loop through transactions in prev block
             for i, transaction in enumerate(transactions[1:]):
                 # check if transaction has appeared in previous blocks
@@ -348,9 +377,16 @@ class Ledger:
                     # transaction repeated
                     print(f"this transaction appeared before. Transaction: {transaction}")
                     return False
-
+        
         for transaction in transactions:
-            transaction.validate(transaction.sig)
+            # check if transaction was really sent by the sender
+            try:
+                transaction.validate(transaction.sig)
+            except AssertionError:
+                print("sender's signature is not valid")
+            # check if sender has enough money
+            # if ledger.get_balance(transaction.sender) - transaction.amount < 0:
+                # return False
         
         self.update_ledger(transaction)
         print("Transaction has been verified: "+json.dumps(self.balance))

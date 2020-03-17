@@ -207,7 +207,10 @@ def verify_Transaction(txid):
     proof_string = response["proof"]
     proof_bytes = []
     for i in proof_string:
-        proof_bytes.append(binascii.unhexlify(bytes(i, 'utf-8')))
+        if i == "None":
+            proof_bytes.append(None)
+        else:
+            proof_bytes.append([i[0], binascii.unhexlify(bytes(i[1], 'utf-8'))])
     root_bytes = binascii.unhexlify(bytes(response["root"], 'utf-8'))
     print(entry, proof_bytes, root_bytes)
     verify = verify_proof(entry, proof_bytes, root_bytes)
