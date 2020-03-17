@@ -477,8 +477,15 @@ def request_account_balance(public_key):
 def request_send_transaction():
     receiver_public_key = request.args.get('receiver', '')
     amount = request.args.get('amount', '')
-    new_transaction = Transaction(
-        PUBLIC_KEY, receiver_public_key, int(amount), sender_pk=PRIVATE_KEY)
+    blockchain_request_queue.put(None)
+    ledger = blockchain_reply_queue.get()[2]
+    balance = ledger[PUBLIC_KEY_STRING]
+    if balance > int(amount):
+        new_transaction = Transaction(
+            PUBLIC_KEY, receiver_public_key, int(amount), sender_pk=PRIVATE_KEY)
+        return ("Sufficient balance in account!")
+    else:
+        return ("Insufficient balance in account to proceed.")
     # broadcast to all known miners
     # print(new_transaction)
     # data = pickle.dumps(new_transaction, protocol=2)

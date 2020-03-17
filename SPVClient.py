@@ -24,37 +24,6 @@ app = Flask(__name__)
 def parse_arguments(argv):
     inputfile = ''
     list_of_miner_ip = []
-    try:
-        opts, args = getopt.getopt(
-            argv, "hp:m:w:", ["port=", "iminerfile=", "wallet="])
-    # Only port and input is mandatory
-    except getopt.GetoptError:
-        print('miner.py -p <port> -i <inputfile of list of IPs of other miners> -w <hashed public key of SPVClient>')
-        sys.exit(2)
-
-    for opt, arg in opts:
-        if opt == '-h':
-            print('miner.py -p <port> -i <inputfile of list of IPs of other miners> -w <hashed public key of SPVClient>')
-            sys.exit()
-
-        elif opt in ("-p", "--port"):
-            my_port = arg
-
-        elif opt in ("-i", "--iminerfile"):
-            inputfile = arg
-            f = open(inputfile, "r")
-            for line in f:
-                list_of_miner_ip.append(line)
-
-        elif opt in ("-w", "--wallet"):
-            wallet_arg = arg
-
-    return my_port, list_of_miner_ip, wallet_arg
-
-# Parsing arguments when entered via CLI
-def parse_arguments(argv):
-    inputfile = ''
-    list_of_miner_ip = []
     private_key=None
     try:
         opts, args = getopt.getopt(
@@ -132,18 +101,6 @@ class SPVClient:
         new_txn.sign(self.PRIVATE_KEY)
         return new_txn
 
-    def check_balance_of_pub(self, public_key, chain): 
-		transactions_list = []
-		balance = 0
-		for v in chain.past_transactions:
-		    if v.sender == public_key:
-		        balance -= v.amount
-		        transactions_list.append(v)
-		    if v.receiver == public_key:
-		        balance += v.amount
-		        transactions_list.append(v)
-		return balance
-
     # def grab_all_transactions(self, chain):
     #     '''
     #     Keeps a list of all the transactions broadcasted in the network
@@ -190,6 +147,41 @@ def createTransaction():
 
     else:
         return 'wrong format of transaction sent'
+#TODO: Check for this and createTransaction!!!!!!!!!!!!!!
+# @app.route('/send_transaction')
+# def request_send_transaction():
+#     receiver_public_key = request.args.get('receiver', '')
+#     amount = request.args.get('amount', '')
+#     new_transaction = Transaction(
+#         PUBLIC_KEY, receiver_public_key, int(amount), sender_pk=PRIVATE_KEY)
+#     # broadcast to all known miners
+#     # print(new_transaction)
+#     # data = pickle.dumps(new_transaction, protocol=2)
+
+#     for miner in LIST_OF_MINER_IP:
+#         not_sent = True
+#         # execute post request to broadcast transaction
+#         while not_sent:
+#             try:
+#                 requests.post(
+#                     url="http://" + miner + "/transaction",
+#                     data=new_transaction.to_json()
+#                 )
+#                 not_sent = False
+#             except:
+#                 time.sleep(0.1)
+#     not_sent = True
+#     while not_sent:
+#         try:
+#             requests.post(
+#                 url="http://127.0.0.1:" + MY_PORT + "/transaction",
+#                 data=new_transaction.to_json()
+#             )
+#             not_sent = False
+#         except:
+#             time.sleep(0.1)
+#     return jsonify(new_transaction.to_json())
+
 
 @app.route('/verify_transaction/<txid>', methods=['GET'])
 def verify_Transaction(txid):
@@ -202,6 +194,7 @@ def verify_Transaction(txid):
     entry = response["entry"]
     proof_string = response["proof"]
     proof_bytes = []
+    print(entry)
     for i in proof_string:
         if i == "None":
             proof_bytes.append(None)
@@ -211,37 +204,37 @@ def verify_Transaction(txid):
     print(entry, proof_bytes, root_bytes)
     verify = verify_proof(entry, proof_bytes, root_bytes)
     if verify:
-        # TODO check if full txn in entry has the same TXID
-        if Transaction.txid in entry:
-            print("Entry has the same TXID.")
-        else:
-            print("Entry and TXID do not match.")
+        # # TODO check if full txn in entry has the same TXID
+        # if Transaction.txid in entry:
+        #     print("Entry has the same TXID.")
+        # else:
+        #     print("Entry and TXID do not match.")
  
-        # TODO Check if the root is actually in blockchain by comapring if the hashed header is in the cleaned_keys
-        def resolve(self):
-        if len(self.chain) > 0:
-            longest_chain_length = 0
-            for hash_value in self.chain:
-                if self.chain[hash_value].previous_header_hash == None:
-                    # Find the genesis block's hash value
-                    genesis_hash_value = hash_value
-                    # Start DP function
-                    temp_cleaned_keys = self.resolve_DP(
-                        genesis_hash_value, 0, [genesis_hash_value])[1]
-                    if len(temp_cleaned_keys) > longest_chain_length:
-                        self.cleaned_keys = copy.deepcopy(temp_cleaned_keys)
-                        longest_chain_length = len(temp_cleaned_keys)
-            try:
-                self.last_hash = self.cleaned_keys[-1]
-            except IndexError:
-                self.last_hash = None
+        # # TODO Check if the root is actually in blockchain by comapring if the hashed header is in the cleaned_keys
+        # def resolve(self):
+        # if len(self.chain) > 0:
+        #     longest_chain_length = 0
+        #     for hash_value in self.chain:
+        #         if self.chain[hash_value].previous_header_hash == None:
+        #             # Find the genesis block's hash value
+        #             genesis_hash_value = hash_value
+        #             # Start DP function
+        #             temp_cleaned_keys = self.resolve_DP(
+        #                 genesis_hash_value, 0, [genesis_hash_value])[1]
+        #             if len(temp_cleaned_keys) > longest_chain_length:
+        #                 self.cleaned_keys = copy.deepcopy(temp_cleaned_keys)
+        #                 longest_chain_length = len(temp_cleaned_keys)
+        #     try:
+        #         self.last_hash = self.cleaned_keys[-1]
+        #     except IndexError:
+        #         self.last_hash = None
 
-            dropped_blocks = self.find_dropped_blocks()
-            for _, block in dropped_blocks.items():
-                rebroadcasted = False
-                while not rebroadcasted:
-                    # retry rebroadcasting until it succeeds
-                    rebroadcasted = self.rebroadcast_transactions(block)
+        #     dropped_blocks = self.find_dropped_blocks()
+        #     for _, block in dropped_blocks.items():
+        #         rebroadcasted = False
+        #         while not rebroadcasted:
+        #             # retry rebroadcasting until it succeeds
+        #             rebroadcasted = self.rebroadcast_transactions(block)
 
 
 
