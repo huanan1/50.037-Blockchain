@@ -98,6 +98,10 @@ MY_PORT, LIST_OF_MINER_IP, LIST_OF_SPV_IP, COLOR, MODE, SELFISH, PRIVATE_KEY, DO
 # MODE is either 1 or 2, 1 is full details, 2 is shortform
 # SELFISH if True, this miner will be a selfish miner
 
+for count, i in enumerate(LIST_OF_MINER_IP):
+    if i == ("127.0.0.1:" + MY_PORT):
+        del LIST_OF_MINER_IP[count]
+
 if PRIVATE_KEY is None:
     PRIVATE_KEY = ecdsa.SigningKey.generate()
 PUBLIC_KEY = PRIVATE_KEY.get_verifying_key()

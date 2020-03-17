@@ -20,7 +20,6 @@ class Transaction:
             self.receiver_vk = binascii.hexlify(receiver_vk.to_string()).decode()
         except:
             self.receiver_vk = receiver_vk # verifying key
-        print(self.receiver_vk)
         self.sender_pk = sender_pk  # private key
         assert amount > 0
         self.amount = amount

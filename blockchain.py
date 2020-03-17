@@ -290,7 +290,7 @@ class Ledger:
             self.balance[transaction.receiver_vk] += transaction.amount
 
         #don't have to check whether sender exists because it is done under verify_transaction
-        self.balance[transaction.receiver_vk] -= transaction.amount
+        self.balance[transaction.sender_vk] -= transaction.amount
       
 
     def coinbase_transaction(self, public_key):
@@ -388,7 +388,7 @@ class Ledger:
             # if ledger.get_balance(transaction.sender) - transaction.amount < 0:
                 # return False
         
-        self.update_ledger(transaction)
+        self.update_ledger(new_transaction)
         print("Transaction has been verified: "+json.dumps(self.balance))
         return True
 
