@@ -35,10 +35,11 @@ Demo instructions:
 
 # POSSIBLE TODO
 - actually broadcast transaction
-- create new public key and send all money from old public key to new public key
-- use only new public key
+X create new public key and send all money from old public key to new public key
+X use only new public key
 X reject creating merkle tree with transactions in ignore_transactions list
-- set trigger block to block with the broadcasted transactions
+- set trigger block to block with the broadcasted transaction, 
+resetting of identity and attacks should start from the block before that
 '''
 
 app = Flask(__name__)
@@ -95,7 +96,7 @@ def check_block_in_chain(blockchain, block_header_hash):
     return False
 
 
-def start_mining(block_queue, transaction_queue):
+def start_mining(block_queue, transaction_queue, public_key, private_key):
     blockchain = BlockChain([args.ip_other])
     miner = Miner(blockchain, public_key)
     miner_status = False # whether miner is ready to send
@@ -127,10 +128,11 @@ def start_mining(block_queue, transaction_queue):
                 announced_attack = True
         while True:
             miner_status = False
-            # this if statement will only be True once
+            # this if statement should only be True once
+            # start of attack
             if args.attacker and start_attack and not tx_sent:
                 bad_tx = Transaction(public_key,SigningKey.generate().get_verifying_key(),50, "give me the goods", sender_pk=private_key).to_json().encode()
-                print("sending transaction...")
+                print("sending transaction with intent to double-spend...")
                 # broadcast_transaction(bad_tx) # TODO unable to send, gets stuck in loop
                 print("sent transaction")
                 ignore_transactions.append(bad_tx)
@@ -144,7 +146,23 @@ def start_mining(block_queue, transaction_queue):
                 except IndexError:
                     # IndexError happens if no new block was mined after trigger block
                     # include at least one element to prevent index error in acccessing original_blocks later
-                    original_blocks = ["0"]
+                    original_blocks = ["000"]
+                
+                # generate new public key and empty out balance from old public key
+                new_private_key = create_key()
+                new_public_key = new_private_key.get_verifying_key()
+                empty_old_account = Transaction(public_key, new_public_key, amount=ledger.get_balance(public_key), comment="transferring all money out", sender_pk=private_key).to_json().encode()
+                print("double-spending: making transaction to empty out old account...")
+                # broadcast
+                print("sent transaction")
+                public_key = new_public_key
+                private_key = new_private_key
+
+                # take on a new identity
+                miner = Miner(blockchain, new_public_key)
+                # need to create merkle again so coinbase goes to new_public_key
+                merkletree, ledger = miner.create_merkle(transaction_queue, tx_to_ignore=ignore_transactions)
+
 
             # if attack starts, slow down honest miner
             if not args.attacker and start_attack:
@@ -254,6 +272,6 @@ if __name__ == '__main__':
     block_queue = Queue()
     transaction_queue = Queue()
     
-    p = Process(target=start_mining, args=(block_queue, transaction_queue,))
+    p = Process(target=start_mining, args=(block_queue, transaction_queue,public_key,private_key,))
     p.start()
     app.run(host="0.0.0.0", debug=True, use_reloader=False,port=args.port)
