@@ -6,6 +6,7 @@ from merkle_tree import verify_proof
 from flask import Flask, request, jsonify
 from multiprocessing import Process, Queue
 from merkle_tree import verify_proof
+from miner import verify_transaction_from_spv
 
 import binascii
 import time
@@ -15,6 +16,7 @@ import pickle
 import json
 import requests
 import random
+import copy
 
 app = Flask(__name__)
 
@@ -109,6 +111,7 @@ class SPVClient:
         self.PUBLIC_KEY = None
         # Private key of the wallet to sign outgoing transactions.
         self.PRIVATE_KEY = None
+        self.balance = 0
 
     def create_keys(self):
         # Create the private and pulic keys for SPVClient.
@@ -123,37 +126,37 @@ class SPVClient:
         self.PUBLIC_KEY = public_key
         return private_key, public_key
 
-    def receive_block_headers(self, Block):
-        # Get all the block headers from BlockChain class
-        #TODO: Double check on how to get the headers of the blocks
-        self.block_headers = []
-        block_header_copy = copy.deepcopy(list(Block.header_hash()))
-        self.block_headers.append(block_header_copy)
-        return block_headers
-
     def create_transaction(self, receiver, amount, comment):
         # Create new transaction and sign with private key
         new_txn = Transaction.new(sender=self.PUBLIC_KEY, receiver=receiver, amount=amount, comment=comment)
         new_txn.sign(self.PRIVATE_KEY)
         return new_txn
 
-    #TODO: Is it this part need to accept prev header and current header?
-    # def check_balance(self, ledger):
-    #     balance = getBalance(self.PUBLIC_KEY)
-    #     return balance
+    def check_balance_of_pub(self, public_key, chain): 
+		transactions_list = []
+		balance = 0
+		for v in chain.past_transactions:
+		    if v.sender == public_key:
+		        balance -= v.amount
+		        transactions_list.append(v)
+		    if v.receiver == public_key:
+		        balance += v.amount
+		        transactions_list.append(v)
+		return balance
 
-
-@app.route('/')
-def homepage():
-    return ""
-
-# For a single SPVClient
-@app.route('/login/<pub>/<priv>')
-def login(pub, priv):
-    # temporary
-    global user
-    user = SPVClient(privatekey=priv, publickey=pub)
-    return homepage()
+    # def grab_all_transactions(self, chain):
+    #     '''
+    #     Keeps a list of all the transactions broadcasted in the network
+    #     '''
+    #     list_of_all_txns = []
+    #     try:
+    #         transaction = Transaction.from_json(transaction)
+    #         for broadcasted_transaction in list_of_all_txns: 
+    #             if broadcasted_transaction not in list_of_all_txns:
+    #                 list_of_all_txns.append(transaction)
+    #     except:
+    #         pass
+    #     return list_of_all_txns
 
 @app.route('/block_header', methods=['POST'])
 def new_block_header_network():
@@ -188,13 +191,6 @@ def createTransaction():
     else:
         return 'wrong format of transaction sent'
 
-
-# To check the latest ledger frmo latest block.
-#TODO: Update this part when ledger component is done!!
-@app.route('/clientCheckBalance', methods=['GET'])
-def clientCheckBalance():
-    return user.check_balance(Ledger)
-
 @app.route('/verify_transaction/<txid>', methods=['GET'])
 def verify_Transaction(txid):
     # requests.post(url, headers=headers, data=
@@ -215,13 +211,63 @@ def verify_Transaction(txid):
     print(entry, proof_bytes, root_bytes)
     verify = verify_proof(entry, proof_bytes, root_bytes)
     if verify:
-        # TODO check if entry has the same TXID
-        # TODO Check if the root is actually in blockchain
+        # TODO check if full txn in entry has the same TXID
+        if Transaction.txid in entry:
+            print("Entry has the same TXID.")
+        else:
+            print("Entry and TXID do not match.")
+ 
+        # TODO Check if the root is actually in blockchain by comapring if the hashed header is in the cleaned_keys
+        def resolve(self):
+        if len(self.chain) > 0:
+            longest_chain_length = 0
+            for hash_value in self.chain:
+                if self.chain[hash_value].previous_header_hash == None:
+                    # Find the genesis block's hash value
+                    genesis_hash_value = hash_value
+                    # Start DP function
+                    temp_cleaned_keys = self.resolve_DP(
+                        genesis_hash_value, 0, [genesis_hash_value])[1]
+                    if len(temp_cleaned_keys) > longest_chain_length:
+                        self.cleaned_keys = copy.deepcopy(temp_cleaned_keys)
+                        longest_chain_length = len(temp_cleaned_keys)
+            try:
+                self.last_hash = self.cleaned_keys[-1]
+            except IndexError:
+                self.last_hash = None
+
+            dropped_blocks = self.find_dropped_blocks()
+            for _, block in dropped_blocks.items():
+                rebroadcasted = False
+                while not rebroadcasted:
+                    # retry rebroadcasting until it succeeds
+                    rebroadcasted = self.rebroadcast_transactions(block)
+
+
+
+
         reply = {"Confirmations": 5, "Block_header": "Blah blah"}
         return jsonify(reply)
     # finally:
     return jsonify("TXID not found")
     
+#TODO: get balance
+@app.route('/get_balance/<public_key>')
+def get_balance(public_key):
+    for miner in LIST_OF_MINER_IP:
+        not_sent = True
+        # execute post request to broadcast transaction
+        while not_sent:
+            try:
+                requests.post(
+                    url="http://" + miner + "/account_balance/<public_key>",
+                )
+                not_sent = False
+            except:
+                time.sleep(0.1)
+    return jsonify(SPVClient.PUBLIC_KEY.to_json())
+
+
 
 if __name__ == '__main__':
     app.run(debug=True, use_reloader=False, port=MY_PORT)
