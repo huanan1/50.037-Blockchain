@@ -152,7 +152,7 @@ class BlockChain:
                     print(f"this transaction appeared before. Transaction: {transaction}")
                     return False
         
-        for transaction in transactions:
+        for transaction in transactions[1:0]:
             # check if transaction was really sent by the sender
             try:
                 transaction.validate(transaction.sig)
@@ -308,8 +308,10 @@ class Ledger:
     
     #new_transaction, validated_transaction from create_merkel
     #transactions: validated transactions in existing blocks
-    def verify_transaction(self, new_transaction, validated_transactions, transactions, prev_header_hash, blockchain):
-        transactions = copy.deepcopy(transactions)
+    #def verify_transaction(self, new_transaction, validated_transactions, transactions, prev_header_hash, blockchain):
+    def verify_transaction(self, new_transaction, validated_transactions, last_header_hash, blockchain):
+
+        # transactions = copy.deepcopy(transactions)
         validated_transactions = copy.deepcopy(validated_transactions)
         for i, transaction in enumerate(validated_transactions):
             try:
@@ -336,46 +338,47 @@ class Ledger:
                 return False
               
         # obtain blocks in blockchain uptil block with previous header hash
-        prev_hash_temp = prev_header_hash
-        chain_uptil_prev = [prev_header_hash]
+        last_hash_temp = last_header_hash
+        chain_uptil_last = [last_header_hash]
         while True:
             try:
-                prev_hash_temp = blockchain.chain[prev_hash_temp].previous_header_hash
-                chain_uptil_prev.append(prev_hash_temp)
+                last_hash_temp = blockchain.chain[last_hash_temp].previous_header_hash
+                chain_uptil_last.append(last_hash_temp)
             except KeyError:
-                print(f"there's no such hash: {prev_hash_temp} in the chain")
+                print(f"there's no such hash: {last_hash_temp} in the chain")
                 return False
-            if prev_hash_temp == None:
+            if last_hash_temp == None:
                 break
-        for i, transaction in enumerate(transactions):
-            transactions[i] = Transaction.from_json(transaction)
+        #for i, transaction in enumerate(transactions):
+            #transactions[i] = Transaction.from_json(transaction)
 
         # check coinbase transaction amount
-        if transactions[0].amount != 100:
-            print("the amt in the coinbase transaction is not 100")
-            return False
+        # if transactions[0].amount != 100:
+        #     print("the amt in the coinbase transaction is not 100")
+        #     return False
         
         # loop through all previous blocks
-        for hash in reversed(chain_uptil_prev):
-            prev_hash = prev_header_hash
+        for hash in reversed(chain_uptil_last):
+            prev_hash = last_header_hash
             prev_merkle_tree = blockchain.chain[prev_hash].transactions
             # loop through transactions in prev block
-            for i, transaction in enumerate(transactions[1:]):
+            # for i, transaction in enumerate(transactions[1:]):
                 # check if transaction has appeared in previous blocks
-                if prev_merkle_tree.get_proof(transaction) != []:
-                    # transaction repeated
-                    print(f"this transaction appeared before. Transaction: {transaction}")
-                    return False
-        
-        for transaction in transactions:
-            # check if transaction was really sent by the sender
-            try:
-                transaction.validate(transaction.sig)
-            except AssertionError:
-                print("sender's signature is not valid")
-            # check if sender has enough money
-            if self.balance(transaction.sender_vk) - transaction.amount < 0:
+            if prev_merkle_tree.get_proof(new_transaction) != []:
+                # transaction repeated
+                print(f"this transaction appeared before. Transaction: {new_transaction}")
                 return False
+        
+        # print(transactions)
+        # for transaction in transactions[1:]:
+        #     # check if transaction was really sent by the sender
+        #     try:
+        #         transaction.validate(transaction.sig)
+        #     except AssertionError:
+        #         print("sender's signature is not valid")
+            # check if sender has enough money
+            # if self.balance[transaction.sender_vk] - transaction.amount < 0:
+            #     return False
         
         self.update_ledger(new_transaction)
         print("Transaction has been verified: "+json.dumps(self.balance))

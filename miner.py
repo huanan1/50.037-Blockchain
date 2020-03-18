@@ -163,7 +163,9 @@ class Miner:
             # for transaction in TEST_LIST:
             # print("entering verify")
             # TODO: check if transaction makes sense in the ledger
-            if ledger.verify_transaction(transaction, list_of_validated_transactions, block.transactions.leaf_set, block.previous_header_hash, self.blockchain):
+            #if ledger.verify_transaction(transaction, list_of_validated_transactions, block.transactions.leaf_set, block.previous_header_hash, self.blockchain):
+            if ledger.verify_transaction(transaction, list_of_validated_transactions, binascii.hexlify(block.header_hash()).decode(), self.blockchain):
+
                 list_of_validated_transactions.append(transaction)
                 print("verification complete")
         merkletree = MerkleTree()
