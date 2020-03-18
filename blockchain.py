@@ -402,7 +402,7 @@ class Ledger:
 # have the latest ledger to be used here in the merkle_tree
 
 # There are 2 main checks to be done here
-# 1. The accounts involved have enough money to transact, depending on the ledger
+# 1. The accounts involved have enough money to transact, depending on the ledger. Done!
 # 2. TXID (hash of transaction, not created yet) is not duplicated. I can't think of a way other than looking through EVERY transaction
 
 

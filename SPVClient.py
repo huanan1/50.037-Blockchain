@@ -30,12 +30,12 @@ def parse_arguments(argv):
             argv, "hp:m:w:", ["port=", "iminerfile=", "wallet="])
     # Only port and input is mandatory
     except getopt.GetoptError:
-        print('miner.py -p <port> -i <inputfile of list of IPs of other miners> -w <hashed public key of SPVClient>')
+        print('SPVClient.py -p <port> -m <inputfile of list of IPs of other miners> -w <hashed public key of SPVClient>')
         sys.exit(2)
 
     for opt, arg in opts:
         if opt == '-h':
-            print('miner.py -p <port> -i <inputfile of list of IPs of other miners> -w <hashed public key of SPVClient>')
+            print('SPVClient.py -p <port> -m <inputfile of list of IPs of other miners> -w <hashed public key of SPVClient>')
             sys.exit()
 
         elif opt in ("-p", "--port"):
@@ -64,6 +64,8 @@ print(PUBLIC_KEY_STRING)
 user = None
 block_header_queue = Queue()
 transaction_queue = Queue()
+blockchain_request_queue = Queue()
+blockchain_reply_queue = Queue()
 
 class SPVClient:
     '''
@@ -80,7 +82,6 @@ class SPVClient:
         self.PUBLIC_KEY = None
         # Private key of the wallet to sign outgoing transactions.
         self.PRIVATE_KEY = None
-        self.balance = 0
 
     def create_keys(self):
         # Create the private and pulic keys for SPVClient.
@@ -124,63 +125,25 @@ def new_block_header_network():
 # To broadcast to all miners when transaction is created
 @app.route('/createTransaction', methods=['POST'])
 def createTransaction():
-    if request.headers['Content-Type'] == 'application/json':
-        # Receive data regarding transaction
-        json_received = request.json
-        transaction_data = json.loads(json_received)
-        print(transaction_data)
+    receiver_public_key = request.args.get('receiver', '')
+    amount = request.args.get('amount', '')
+    new_transaction = Transaction(
+        PUBLIC_KEY, receiver_public_key, int(amount), sender_pk=PRIVATE_KEY)
 
-        transaction = SPVClient.create_transaction(
-                        receivervk=transaction_data["recv"],
-                        amount=transaction_data["Amount"],
-                        comment=transaction_data["Comment"]
-                        )
-
-        # broadcast to all known miners
-        for miner in LIST_OF_MINER_IP:
-            # execute post request to broadcast transaction
-            broadcast_endpoint = miner + "/newTransaction"
-            requests.post(
-                url=broadcast_endpoint,
-                json=transaction.to_json()
-            )
-
-    else:
-        return 'wrong format of transaction sent'
-#TODO: Check for this and createTransaction!!!!!!!!!!!!!!
-# @app.route('/send_transaction')
-# def request_send_transaction():
-#     receiver_public_key = request.args.get('receiver', '')
-#     amount = request.args.get('amount', '')
-#     new_transaction = Transaction(
-#         PUBLIC_KEY, receiver_public_key, int(amount), sender_pk=PRIVATE_KEY)
-#     # broadcast to all known miners
-#     # print(new_transaction)
-#     # data = pickle.dumps(new_transaction, protocol=2)
-
-#     for miner in LIST_OF_MINER_IP:
-#         not_sent = True
-#         # execute post request to broadcast transaction
-#         while not_sent:
-#             try:
-#                 requests.post(
-#                     url="http://" + miner + "/transaction",
-#                     data=new_transaction.to_json()
-#                 )
-#                 not_sent = False
-#             except:
-#                 time.sleep(0.1)
-#     not_sent = True
-#     while not_sent:
-#         try:
-#             requests.post(
-#                 url="http://127.0.0.1:" + MY_PORT + "/transaction",
-#                 data=new_transaction.to_json()
-#             )
-#             not_sent = False
-#         except:
-#             time.sleep(0.1)
-#     return jsonify(new_transaction.to_json())
+    # broadcast to all known miners
+    for miner in LIST_OF_MINER_IP:
+        not_sent = True
+        # execute post request to broadcast transaction
+        while not_sent:
+            try:
+                requests.post(
+                    url="http://" + miner + "/transaction",
+                    data=new_transaction.to_json()
+                )
+                not_sent = False
+            except:
+                time.sleep(0.1)
+    return jsonify(new_transaction.to_json())
 
 
 @app.route('/verify_transaction/<txid>', methods=['GET'])
@@ -194,7 +157,6 @@ def verify_Transaction(txid):
     entry = response["entry"]
     proof_string = response["proof"]
     proof_bytes = []
-    print(entry)
     for i in proof_string:
         if i == "None":
             proof_bytes.append(None)
@@ -204,42 +166,32 @@ def verify_Transaction(txid):
     print(entry, proof_bytes, root_bytes)
     verify = verify_proof(entry, proof_bytes, root_bytes)
     if verify:
-        # # TODO check if full txn in entry has the same TXID
-        # if Transaction.txid in entry:
-        #     print("Entry has the same TXID.")
-        # else:
-        #     print("Entry and TXID do not match.")
+        # TODO check if response has the same TXID
+        if entry["txid"] == txid:
+            return ("Received transaction ID same as sent TXID.")
+        else:
+            return ("Received transaction ID does not match sent TXID.")
  
-        # # TODO Check if the root is actually in blockchain by comapring if the hashed header is in the cleaned_keys
-        # def resolve(self):
-        # if len(self.chain) > 0:
-        #     longest_chain_length = 0
-        #     for hash_value in self.chain:
-        #         if self.chain[hash_value].previous_header_hash == None:
-        #             # Find the genesis block's hash value
-        #             genesis_hash_value = hash_value
-        #             # Start DP function
-        #             temp_cleaned_keys = self.resolve_DP(
-        #                 genesis_hash_value, 0, [genesis_hash_value])[1]
-        #             if len(temp_cleaned_keys) > longest_chain_length:
-        #                 self.cleaned_keys = copy.deepcopy(temp_cleaned_keys)
-        #                 longest_chain_length = len(temp_cleaned_keys)
-        #     try:
-        #         self.last_hash = self.cleaned_keys[-1]
-        #     except IndexError:
-        #         self.last_hash = None
-
-        #     dropped_blocks = self.find_dropped_blocks()
-        #     for _, block in dropped_blocks.items():
-        #         rebroadcasted = False
-        #         while not rebroadcasted:
-        #             # retry rebroadcasting until it succeeds
-        #             rebroadcasted = self.rebroadcast_transactions(block)
-
-
-
-
-        reply = {"Confirmations": 5, "Block_header": "Blah blah"}
+        # TODO Check if the root is actually in blockchain by comparing if the hashed header is in the cleaned_keys
+        blockchain_request_queue.put(None)
+        blockchain_tuple = blockchain_reply_queue.get()
+        cleaned_keys, chain = blockchain_tuple[0], blockchain_tuple[1]
+        for count, i in enumerate(cleaned_keys):
+            merkle_tree = chain[i].transactions     
+            for j in merkle_tree.leaf_set:
+                if json.loads(j.decode())["txid"] == txid:
+                    proof_bytes = merkle_tree.get_proof(j.decode()) 
+                    proof_string = []
+                    for k in proof_bytes:
+                        if k is None:
+                            proof_string.append("None")
+                        else:
+                            proof_string.append(
+                            [k[0], binascii.hexlify(k[1]).decode()])
+                    root_bytes = merkle_tree.get_root()
+                    root_string = binascii.hexlify(root_bytes).decode()
+                    reply = {"entry": j.decode(), "proof": proof_string, "root": root_string, "verify": verify_proof(
+                        j.decode(), proof_bytes, root_bytes), "confirmations": (len(cleaned_keys) - count), "block_header": i}
         return jsonify(reply)
     # finally:
     return jsonify("TXID not found")
