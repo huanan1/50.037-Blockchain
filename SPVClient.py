@@ -146,7 +146,7 @@ def createTransaction():
     return jsonify(new_transaction.to_json())
 
 
-@app.route('/verify_transaction/<txid>', methods=['GET'])
+@app.route('/spv_verify_transaction/<txid>', methods=['GET'])
 def verify_Transaction(txid):
     # requests.post(url, headers=headers, data=
     miner_ip = random.choice(LIST_OF_MINER_IP)
@@ -172,27 +172,22 @@ def verify_Transaction(txid):
         else:
             return ("Received transaction ID does not match sent TXID.")
  
-        # TODO Check if the root is actually in blockchain by comparing if the hashed header is in the cleaned_keys
+        #TODO Check if the root is actually in blockchain by comparing if the hashed header is in the cleaned_keys
+        #TODO We got the dictonary of block headers. Look through this dictionary for the block header using the specific root returned by miner.
+        #TODO After locating the block header, check the cleaned_keys and return the position of the block header in cleaned keys.
         blockchain_request_queue.put(None)
-        blockchain_tuple = blockchain_reply_queue.get()
-        cleaned_keys, chain = blockchain_tuple[0], blockchain_tuple[1]
-        for count, i in enumerate(cleaned_keys):
-            merkle_tree = chain[i].transactions     
-            for j in merkle_tree.leaf_set:
-                if json.loads(j.decode())["txid"] == txid:
-                    proof_bytes = merkle_tree.get_proof(j.decode()) 
-                    proof_string = []
-                    for k in proof_bytes:
-                        if k is None:
-                            proof_string.append("None")
-                        else:
-                            proof_string.append(
-                            [k[0], binascii.hexlify(k[1]).decode()])
-                    root_bytes = merkle_tree.get_root()
-                    root_string = binascii.hexlify(root_bytes).decode()
-                    reply = {"entry": j.decode(), "proof": proof_string, "root": root_string, "verify": verify_proof(
-                        j.decode(), proof_bytes, root_bytes), "confirmations": (len(cleaned_keys) - count), "block_header": i}
-        return jsonify(reply)
+        block_headers = blockchain_reply_queue.get()[0]
+        root = root_bytes.decode('utf-8') # Returns the root in string format
+        for blk_header in block_headers:
+            if blk_header.hash_tree_root == root: # Finds corresponding block header
+                blk_header_temp = blk_header
+                print("Block header with transaction found.")
+                for count, i in enumerate(BlockChain.cleaned_keys):
+                    if blk_header_temp in BlockChain.cleaned_keys: # If corresponding block header is in clean_keys list...
+                        reply = {"Position in cleaned_keys": (len(BlockChain.cleaned_keys) - count)} # Returns the position of block header in cleaned_keys
+                        return jsonify(reply)
+            else:
+                return jsonify("No block headers found.")
     # finally:
     return jsonify("TXID not found")
 
