@@ -1,3 +1,4 @@
+import logging
 import random
 import time
 import copy
@@ -22,7 +23,6 @@ from merkle_tree import MerkleTree, verify_proof
 
 app = Flask(__name__)
 # This section is to get rid of Flask logging messages
-import logging
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
@@ -110,7 +110,8 @@ for count, i in enumerate(LIST_OF_MINER_IP):
 if PRIVATE_KEY is None:
     PRIVATE_KEY = ecdsa.SigningKey.generate()
 else:
-    PRIVATE_KEY = ecdsa.SigningKey.from_string(binascii.unhexlify(bytes(PRIVATE_KEY, 'utf-8')))
+    PRIVATE_KEY = ecdsa.SigningKey.from_string(
+        binascii.unhexlify(bytes(PRIVATE_KEY, 'utf-8')))
 PUBLIC_KEY = PRIVATE_KEY.get_verifying_key()
 PUBLIC_KEY_STRING = binascii.hexlify(PUBLIC_KEY.to_string()).decode()
 
@@ -381,7 +382,7 @@ def verify_Transaction(txid):
                         proof_string.append("None")
                     else:
                         proof_string.append(
-                        [k[0], binascii.hexlify(k[1]).decode()])
+                            [k[0], binascii.hexlify(k[1]).decode()])
                 root_bytes = merkle_tree.get_root()
                 root_string = binascii.hexlify(root_bytes).decode()
                 reply = {"entry": j.decode(), "proof": proof_string, "root": root_string, "verify": verify_proof(
@@ -410,7 +411,7 @@ def verify_transaction_from_spv():
                         proof_string.append("None")
                     else:
                         proof_string.append(
-                        [k[0], binascii.hexlify(k[1]).decode()])
+                            [k[0], binascii.hexlify(k[1]).decode()])
                 root_bytes = merkle_tree.get_root()
                 root_string = binascii.hexlify(root_bytes).decode()
                 # print ("verify", verify_proof(j.decode(), proof_bytes, root_bytes))

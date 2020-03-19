@@ -9,6 +9,7 @@ from transaction import Transaction
 import pickle
 import copy
 
+
 class SPVBlock:
     def __init__(self, block):
         # Instantiates object from passed values
@@ -17,6 +18,7 @@ class SPVBlock:
         self.timestamp = block.timestamp  # unix time in string
         self.nonce = block.nonce  # nonce in int
         self.header_hash = binascii.hexlify(block.header_hash()).decode()
+
 
 class SPVBlockChain:
     # chain is a dictionary, key is hash header, value is the header metadata of blocks
@@ -30,7 +32,6 @@ class SPVBlockChain:
     def network_add(self, spv_block):
         # check for genesis block
         self.chain[spv_block.header_hash] = spv_block
-
 
     def resolve(self):
         if len(self.chain) > 0:
@@ -49,7 +50,6 @@ class SPVBlockChain:
                 self.last_hash = self.cleaned_keys[-1]
             except IndexError:
                 self.last_hash = None
-                
 
     def resolve_DP(self, hash_check, score, cleared_hashes):
         # Assuming this is the last block in the chain, it first saves itself to the list
@@ -78,14 +78,14 @@ class SPVBlockChain:
             return self.chain[self.last_hash]
         else:
             return None
-            
+
     def __str__(self):
         reply = "-----------------\nThere are {} blocks in the blockchain\n\n".format(
             len(self.chain))
         for count, i in enumerate(self.chain):
             reply += "Header: {}\tPrev_header: {}\n".format(
                 str(i), str(self.chain[i].previous_header_hash))
-        reply+="\n~~~\n"
+        reply += "\n~~~\n"
         reply += "The longest chain is {} blocks\n".format(
             len(self.cleaned_keys))
         for count, i in enumerate(self.cleaned_keys):
