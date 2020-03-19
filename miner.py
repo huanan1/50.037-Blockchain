@@ -1,3 +1,4 @@
+import logging
 import random
 import time
 import copy
@@ -12,6 +13,7 @@ import json
 from ecdsa import SigningKey
 from flask import Flask, request, jsonify
 from multiprocessing import Process, Queue
+from spv_block import SPVBlock
 import json
 
 from blockchain import BlockChain, Block, Ledger
@@ -21,7 +23,6 @@ from merkle_tree import MerkleTree, verify_proof
 
 app = Flask(__name__)
 # This section is to get rid of Flask logging messages
-import logging
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
@@ -109,7 +110,8 @@ for count, i in enumerate(LIST_OF_MINER_IP):
 if PRIVATE_KEY is None:
     PRIVATE_KEY = ecdsa.SigningKey.generate()
 else:
-    PRIVATE_KEY = ecdsa.SigningKey.from_string(binascii.unhexlify(bytes(PRIVATE_KEY, 'utf-8')))
+    PRIVATE_KEY = ecdsa.SigningKey.from_string(
+        binascii.unhexlify(bytes(PRIVATE_KEY, 'utf-8')))
 PUBLIC_KEY = PRIVATE_KEY.get_verifying_key()
 PUBLIC_KEY_STRING = binascii.hexlify(PUBLIC_KEY.to_string()).decode()
 
@@ -238,6 +240,19 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                             except:
                                 print("Send failed", miner_ip)
                                 time.sleep(0.2)
+                    sending_spv_block = SPVBlock(sending_block)
+                    data = pickle.dumps(sending_spv_block, protocol=2)
+                    for spv_ip in LIST_OF_SPV_IP:
+                        send_failed = True
+                        # Retry until peer receives, idk i think prof say ok right? assume all in stable network lel
+                        while send_failed:
+                            try:
+                                requests.post("http://"+spv_ip +
+                                              "/block_header", data=data)
+                                send_failed = False
+                            except:
+                                print("Send failed", spv_ip)
+                                time.sleep(0.2)
                 # If selfish miner
                 else:
                     mine_or_recv += "SELFISH MINING\n"
@@ -328,7 +343,7 @@ def verify_Transaction(txid):
                         proof_string.append("None")
                     else:
                         proof_string.append(
-                        [k[0], binascii.hexlify(k[1]).decode()])
+                            [k[0], binascii.hexlify(k[1]).decode()])
                 root_bytes = merkle_tree.get_root()
                 root_string = binascii.hexlify(root_bytes).decode()
                 reply = {"entry": j.decode(), "proof": proof_string, "root": root_string, "verify": verify_proof(
@@ -357,7 +372,7 @@ def verify_transaction_from_spv():
                         proof_string.append("None")
                     else:
                         proof_string.append(
-                        [k[0], binascii.hexlify(k[1]).decode()])
+                            [k[0], binascii.hexlify(k[1]).decode()])
                 root_bytes = merkle_tree.get_root()
                 root_string = binascii.hexlify(root_bytes).decode()
                 # print ("verify", verify_proof(j.decode(), proof_bytes, root_bytes))
@@ -434,15 +449,18 @@ def request_account_balance(public_key):
         return "Cannot find account"
 
 
-@app.route('/send_transaction')
+@app.route('/send_transaction', methods=['POST'])
 def request_send_transaction():
     receiver_public_key = request.args.get('receiver', '')
     amount = request.args.get('amount', '')
-    new_transaction = Transaction(
-        PUBLIC_KEY, receiver_public_key, int(amount), sender_pk=PRIVATE_KEY)
-    # broadcast to all known miners
-    # print(new_transaction)
-    # data = pickle.dumps(new_transaction, protocol=2)
+    blockchain_request_queue.put(None)
+    ledger = blockchain_reply_queue.get()[2]
+    balance = ledger[PUBLIC_KEY_STRING]
+    if balance >= int(amount):
+        new_transaction = Transaction(
+            PUBLIC_KEY, receiver_public_key, int(amount), sender_pk=PRIVATE_KEY)
+    else:
+        return ("Insufficient balance in account to proceed.")
 
     for miner in LIST_OF_MINER_IP:
         not_sent = True
