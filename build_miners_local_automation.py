@@ -79,14 +79,14 @@ colors = ['w', 'r', 'g', 'y', 'b', 'm', 'c']
 for count, i in enumerate(list_of_miner_ports):
     # Reads file
     if not SELFISH:
-        os.system("python3 miner.py -p {0} -m miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(
+        os.system("python3 miner_manage.py -p {0} -m miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(
             i, colors[count % len(colors)], list_of_miner_wallets[count]))
     else:
         if count == 0:
-            os.system("python3 miner.py -p {0} -m miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2 -f 1&".format(
+            os.system("python3 miner_manage.py -p {0} -m miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2 -f 1&".format(
                 i, colors[count % len(colors)], list_of_miner_wallets[count]))
         else:
-            os.system("python3 miner.py -p {0} -m miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(
+            os.system("python3 miner_manage.py -p {0} -m miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(
                 i, colors[count % len(colors)], list_of_miner_wallets[count]))
     # Removes file for cleanup
     
