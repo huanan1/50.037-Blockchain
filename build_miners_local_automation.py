@@ -11,30 +11,26 @@ import getopt
 
 def parse_arguments(argv):
     selfish = False
-    double_spending_attack = False
     mode = 1
     try:
         opts, args = getopt.getopt(
-            argv, "hf:a:", ["selfish=", "double_spending_attack="])
+            argv, "hf:", ["selfish="])
     # Only port and input is mandatory
     except getopt.GetoptError:
-        print('build_miners_local_automation.py -f <1 if one selfish miner> -a <1 if double-spending attack>')
+        print('build_miners_local_automation.py -f <1 if one selfish miner>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('build_miners_local_automation.py -f <1 if one selfish miner> -a <1 if double-spending attack>')
+            print('build_miners_local_automation.py -f <1 if one selfish miner>')
             sys.exit()
         elif opt in ("-f", "--selfish"):
             if arg == "1":
                 selfish = True
-        elif opt in ("-a", "--attack"):
-            if arg == "1":
-                double_spending_attack = True
-    return selfish, double_spending_attack
+    return selfish
 
 
 # deploys single selfish miner if true
-SELFISH, DOUBLE_SPENDING_ATTACK = parse_arguments(sys.argv[1:])
+SELFISH = parse_arguments(sys.argv[1:])
 
 # Reads LOCAL ports to use via miner_ports.txt
 f = open("miner_ports.txt", "r")
@@ -82,14 +78,7 @@ f.close()
 colors = ['w', 'r', 'g', 'y', 'b', 'm', 'c']
 for count, i in enumerate(list_of_miner_ports):
     # Reads file
-    if DOUBLE_SPENDING_ATTACK:
-        if count < 2: # only have two miners in double-spending attack demo
-            os.system("python3 miner.py -p {0} -m miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2 -a 1&".format(
-                i, colors[count % len(colors)], list_of_miner_wallets[count]))
-        elif count == 1: # count == 1:
-            os.system("python3 miner.py -p {0} -m partner_miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(
-                i, colors[count % len(colors)], list_of_miner_wallets[count]))
-    elif not SELFISH:
+    if not SELFISH:
         os.system("python3 miner.py -p {0} -m miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(
             i, colors[count % len(colors)], list_of_miner_wallets[count]))
     else:
