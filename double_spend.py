@@ -11,10 +11,10 @@ from ecdsa import SigningKey
 from flask import Flask, request, jsonify
 from multiprocessing import Process, Queue
 
-from blockchain import BlockChain, Block, SPVBlock
+from blockchain import BlockChain, Block
 from transaction import Transaction
 from merkle_tree import MerkleTree
-from miner_cls import Miner
+from miner import Miner
 
 '''
 Attacker carries out double-spend attack by creating a new fork before the block with a transaction he wants to void
@@ -30,8 +30,8 @@ There will be 2 miners in the double-spending demo.
 
 Demo instructions:
 1. Open 2 terminals
-2. Run this on the 1st terminal: python3 double_spend.py --port 25540 --ip_other 127.0.0.1:25541 --color g
-3. Run this on the 2nd terminal: python3 double_spend.py --port 22541 --ip_other 127.0.0.1:25540 --attacker --color r
+2. Run this on the 2nd terminal: python3 double_spend.py --port 22541 --ip_other 127.0.0.1:25540 --attacker --color r
+3. Run this on the 1st terminal: python3 double_spend.py --port 25540 --ip_other 127.0.0.1:25541 --color g
 '''
 
 app = Flask(__name__)
@@ -112,11 +112,12 @@ def start_mining(block_queue, transaction_queue, public_key, private_key):
         if args.attacker and start_attack:
             # make sure new blocks don't include the bad_tx from attacker
             merkletree, ledger = miner.create_merkle(transaction_queue, tx_to_ignore=ignore_transactions)
-        else:
+        else: # not attacker or attacker and not attacking
             merkletree, ledger = miner.create_merkle(transaction_queue)
 
         if not cease_attacks:
             if args.attacker:
+                # 'and sent_tx' ensures attacker only attacks at least one block after bad_tx is sent
                 start_attack = len(blockchain.cleaned_keys)>trigger_block and sent_tx
             else:
                 start_attack = len(blockchain.cleaned_keys)>trigger_block
@@ -153,9 +154,13 @@ def start_mining(block_queue, transaction_queue, public_key, private_key):
                 # generate new public key and empty out balance from old public key
                 new_private_key = create_key()
                 new_public_key = new_private_key.get_verifying_key()
-                empty_old_account = Transaction(public_key, new_public_key, amount=ledger.get_balance(public_key), comment="transferring all money out", sender_pk=private_key).to_json().encode()
-                print("double-spending: making transaction to empty out old account...")
-                print("sent transaction")
+                try:
+                    print("double-spending: making transaction to empty out old account...")
+                    empty_old_account = Transaction(public_key, new_public_key, amount=ledger.get_balance(public_key), comment="transferring all money out", sender_pk=private_key)
+                    print("sent transaction")
+                except AssertionError:
+                    # old account already empty
+                    pass
                 public_key = new_public_key
                 private_key = new_private_key
 
@@ -175,7 +180,7 @@ def start_mining(block_queue, transaction_queue, public_key, private_key):
                 # start mining from block before bad_tx
                 miner_status = miner.mine_from_old_block(merkletree, ledger, private_last_hash)
             else:
-                # mine normally if no attack or if attacker
+                # mine normally if no attack
                 miner_status = miner.mine(merkletree, ledger)
 
             mine_or_recv = ""
@@ -223,7 +228,7 @@ def start_mining(block_queue, transaction_queue, public_key, private_key):
                             requests.post("http://" + args.ip_other +
                                         "/block", data=data)
                             send_failed = False
-                        except:
+                        except: 
                             time.sleep(0.2)
                 break
             
@@ -255,7 +260,7 @@ def new_block_network():
 
 @app.route('/transaction', methods=['POST'])
 def new_transaction_network():
-    new_transaction = pickle.loads(request.get_data())
+    new_transaction = Transaction.from_json(request.data.decode())
     transaction_queue.put(new_transaction)
     return ""
 
