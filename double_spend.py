@@ -32,14 +32,6 @@ Demo instructions:
 1. Open 2 terminals
 2. Run this on the 1st terminal: python3 double_spend.py --port 25540 --ip_other 127.0.0.1:25541 --color g
 3. Run this on the 2nd terminal: python3 double_spend.py --port 22541 --ip_other 127.0.0.1:25540 --attacker --color r
-
-# POSSIBLE TODO
-- actually broadcast transaction
-X create new public key and send all money from old public key to new public key
-X use only new public key
-X reject creating merkle tree with transactions in ignore_transactions list
-- set trigger block to block with the broadcasted transaction, 
-resetting of identity and attacks should start from the block before that
 '''
 
 app = Flask(__name__)
@@ -245,7 +237,6 @@ def start_mining(block_queue, transaction_queue, public_key, private_key):
                     miner.network_block(new_block)
                     mine_or_recv += binascii.hexlify(new_block.header_hash()).decode() + " "
                 if not block_queue_status_initial:
-                    # mine_or_recv += "\n"
                     break
                 block_queue_status_initial= True
         print(color(args.color) +"PORT: {}\n".format(args.port) + mine_or_recv +
