@@ -1,4 +1,4 @@
-# 50.037-Blockchain
+# Group: GOLD EXPERIENCE
 
 ## SUTDCoin
 ## Setting up the environment
@@ -22,6 +22,7 @@ All demonstrations can either be done locally or across multiple computers. The 
 
 ## Documentation of displayed features
 ###	Simulate miners running Nakamoto consensus and making transactions
+_these are the features we're supposed to implement I'm just putting it here_
 Features:
 - new blocks arrive every few (2-5) seconds
 - coinbase transaction of 100 SUTDcoins
@@ -30,7 +31,7 @@ Features:
 - forks resolved
 
 ### Interaction of SPV clients with miners
-Features:
+_these are the features we're supposed to implement I'm just putting it here_
 - associated key pairs
 - receive block headers
 - receive transactions and verify them
