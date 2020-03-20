@@ -1,4 +1,4 @@
-from blockchain import Blockchain, Block, Ledger
+from blockchain import BlockChain, Block, Ledger
 import time
 import copy
 from merkle_tree import MerkleTree, verify_proof
@@ -27,6 +27,18 @@ class Miner:
         self.nonce += 1
         return False
 
+    def mine_from_old_block(self, merkletree, ledger, block_hash):
+        block = Block(merkletree, block_hash, merkletree.get_root(), 
+                self.current_time, self.nonce, ledger)
+        
+        if self.blockchain.add(block):
+            # If the add is successful, reset
+            self.reset_new_mine()
+            return True
+        # Increase nonce everytime the mine fails
+        self.nonce += 1
+        return False
+
     def reset_new_mine(self):
         self.nonce = 0
         self.current_time = str(time.time())
@@ -39,7 +51,7 @@ class Miner:
         if self.blockchain.network_add(block):
             self.reset_new_mine()
 
-    def create_merkle(self, transaction_queue):
+    def create_merkle(self, transaction_queue, tx_to_ignore=None):
         # print("entered create merkel")
         block = self.blockchain.last_block()
         if block is None:
@@ -55,11 +67,13 @@ class Miner:
                 transaction_queue.get())
         # print("length", len(list_of_raw_transactions))
         for transaction in list_of_raw_transactions:
+            if tx_to_ignore is not None and transaction in tx_to_ignore:
+                print(f"ignoring transaction: {transaction}")
             # for transaction in TEST_LIST:
             # print("entering verify")
             # TODO: check if transaction makes sense in the ledger
             #if ledger.verify_transaction(transaction, list_of_validated_transactions, block.transactions.leaf_set, block.previous_header_hash, self.blockchain):
-            if ledger.verify_transaction(transaction, list_of_validated_transactions, binascii.hexlify(block.header_hash()).decode(), self.blockchain):
+            elif ledger.verify_transaction(transaction, list_of_validated_transactions, binascii.hexlify(block.header_hash()).decode(), self.blockchain):
 
                 list_of_validated_transactions.append(transaction)
                 print("verification complete")
