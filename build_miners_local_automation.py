@@ -11,26 +11,30 @@ import getopt
 
 def parse_arguments(argv):
     selfish = False
+    double_spending = False
     mode = 1
     try:
         opts, args = getopt.getopt(
-            argv, "hf:", ["selfish="])
+            argv, "hf:d:", ["selfish=","double_spending="])
     # Only port and input is mandatory
     except getopt.GetoptError:
-        print('build_miners_local_automation.py -f <1 if one selfish miner>')
+        print('build_miners_local_automation.py -f <1 if one selfish miner> -d <1 for double spending demo>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('build_miners_local_automation.py -f <1 if one selfish miner>')
+            print('build_miners_local_automation.py -f <1 if one selfish miner> -d <1 for double spending demo>')
             sys.exit()
         elif opt in ("-f", "--selfish"):
             if arg == "1":
                 selfish = True
-    return selfish
+        elif opt in ("-d", "--double_spending"):
+            if arg == "1":
+                double_spending = True
+    return selfish, double_spending
 
 
 # deploys single selfish miner if true
-SELFISH = parse_arguments(sys.argv[1:])
+SELFISH, DOUBLE_SPENDING = parse_arguments(sys.argv[1:])
 
 # Reads LOCAL ports to use via miner_ports.txt
 f = open("miner_ports.txt", "r")
@@ -78,7 +82,18 @@ f.close()
 colors = ['w', 'r', 'g', 'y', 'b', 'm', 'c']
 for count, i in enumerate(list_of_miner_ports):
     # Reads file
-    if not SELFISH:
+    if DOUBLE_SPENDING:
+        if count == 0:
+            os.system("python3 double_spend.py --port {0} --ip_other {1} --attacker --color r&".format(
+                i, "127.0.0.1:"+list_of_miner_ports[1]
+            ))
+        elif count == 1:
+            os.system("python3 double_spend.py --port {0} --ip_other {1} --color g&".format(
+                i, "127.0.0.1:"+list_of_miner_ports[0]
+            ))
+        else:
+            break
+    elif not SELFISH:
         os.system("python3 miner_manage.py -p {0} -m miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(
             i, colors[count % len(colors)], list_of_miner_wallets[count]))
     else:
