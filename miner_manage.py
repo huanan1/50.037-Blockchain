@@ -118,6 +118,9 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
     # merkletree = create_sample_merkle()
     miner_status = False
     list_of_blocks_selfish = []
+    SELFISH_LENGTH = 3
+    list_of_collectd_selfish_blocks = []
+    selfish_flush = False
     # Infinite loop
     while True:
         #merkletree, ledger = create_sample_merkle()
@@ -166,12 +169,13 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                                 print("Send failed", spv_ip)
                                 time.sleep(0.2)
                 # If selfish miner
-                else:
-                    mine_or_recv += "SELFISH MINING\n"
+                elif SELFISH:
+                    mine_or_recv += "\nSELFISH MINING\n"
                     list_of_blocks_selfish.append(sending_block)
-                    # It will send only every 2 blocks
-                    if len(list_of_blocks_selfish) >= 2:
+                    # It will send only every n blocks
+                    if len(list_of_blocks_selfish) >= SELFISH_LENGTH:
                         mine_or_recv += "SENDING SELFISH BLOCKS\n"
+                        selfish_flush = True
                         for block in list_of_blocks_selfish:
                             block_data = pickle.dumps(block, protocol=2)
                             for miner_ip in LIST_OF_MINER_IP:
@@ -193,7 +197,29 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                 while not block_queue.empty():
                     mine_or_recv += "Block RECEIVED "
                     new_block = block_queue.get()
-                    miner.network_block(new_block)
+                    if not SELFISH:
+                        miner.network_block(new_block)
+                    elif SELFISH:
+                        list_of_collectd_selfish_blocks.append(new_block)
+                        print(list_of_collectd_selfish_blocks)
+                        if len(list_of_collectd_selfish_blocks) >= SELFISH_LENGTH or selfish_flush:
+                            for i in list_of_collectd_selfish_blocks:
+                                miner.network_block(new_block)
+                            for block in list_of_blocks_selfish:
+                                block_data = pickle.dumps(block, protocol=2)
+                                for miner_ip in LIST_OF_MINER_IP:
+                                    send_failed = True
+                                    # Retry until peer receives, idk i think prof say ok right? assume all in stable network lel
+                                    while send_failed:
+                                        try:
+                                            requests.post("http://"+miner_ip +
+                                                        "/block", data=block_data)
+                                            send_failed = False
+                                        except:
+                                            time.sleep(0.1)
+                            list_of_collectd_selfish_blocks = []
+                            list_of_blocks_selfish = []
+                            selfish_flush = False
                     mine_or_recv += binascii.hexlify(
                         new_block.header_hash()).decode() + " "
                 if not block_queue_status_initial:

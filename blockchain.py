@@ -37,7 +37,7 @@ class Block:
 class BlockChain:
     # chain is a dictionary, key is hash header, value is the header metadata of blocks
     chain = dict()
-    TARGET = b"\x00\x00\x0a\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+    TARGET = b"\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
     last_hash = None
     # Cleaned keys is an ordered list of all the header hashes, only updated on BlockChain.resolve() call
     cleaned_keys = []
@@ -49,7 +49,10 @@ class BlockChain:
 
     def retrieve_ledger(self):
         block = self.last_block()
-        return block.ledger.balance
+        try:
+            return block.ledger.balance
+        except:
+            return None
 
     def network_block_validate(self, block):
         # check again that incoming block has prev hash and target < nonce (in case malicious miner publishing invalid blocks)

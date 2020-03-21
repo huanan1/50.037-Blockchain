@@ -50,6 +50,9 @@ class Miner:
         # Checks if the n
         if self.blockchain.network_add(block):
             self.reset_new_mine()
+            return True
+        else:
+            return False
 
     def create_merkle(self, transaction_queue, tx_to_ignore=None):
         # print("entered create merkel")
