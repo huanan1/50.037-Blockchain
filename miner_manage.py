@@ -13,7 +13,7 @@ import json
 from ecdsa import SigningKey
 from flask import Flask, request, jsonify
 from multiprocessing import Process, Queue
-from spv_block import SPVBlock
+from spv_blockchain import SPVBlock
 import json
 from miner import Miner
 
@@ -192,8 +192,6 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                 block_queue_status_initial = block_queue.empty()
                 while not block_queue.empty():
                     mine_or_recv += "Block RECEIVED "
-                    # If detected, add new block to blockchain
-                    # TODO add rebroadcast of signal??
                     new_block = block_queue.get()
                     miner.network_block(new_block)
                     mine_or_recv += binascii.hexlify(

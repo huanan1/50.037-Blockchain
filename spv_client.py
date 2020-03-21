@@ -4,7 +4,7 @@ from transaction import Transaction
 from merkle_tree import verify_proof
 from flask import Flask, request, jsonify
 from merkle_tree import verify_proof
-from spv_block import SPVBlock, SPVBlockChain
+from spv_blockchain import SPVBlock, SPVBlockChain
 
 import binascii
 import time
