@@ -56,8 +56,6 @@ class MerkleTree:
             # elements is what is returned
             elements = []
             # if it matches
-            # print("TESTING")
-            # print(i == str(check).encode(), i, str(check).encode())
             if i == str(check).encode():
                 # make both partner and current equal to the 'starting position'
                 partner_node = count

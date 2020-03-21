@@ -4,8 +4,7 @@ from transaction import Transaction
 from merkle_tree import verify_proof
 from flask import Flask, request, jsonify
 from merkle_tree import verify_proof
-from miner import verify_transaction_from_spv
-from spv_block import SPVBlock, SPVBlockChain
+from spv_blockchain import SPVBlock, SPVBlockChain
 
 import binascii
 import time
@@ -59,8 +58,11 @@ MY_PORT, LIST_OF_MINER_IP, PRIVATE_KEY = parse_arguments(sys.argv[1:])
 
 if PRIVATE_KEY is None:
     PRIVATE_KEY = ecdsa.SigningKey.generate()
+else:
+    PRIVATE_KEY = ecdsa.SigningKey.from_string(
+        binascii.unhexlify(bytes(PRIVATE_KEY, 'utf-8')))
 PUBLIC_KEY = PRIVATE_KEY.get_verifying_key()
-PUBLIC_KEY_STRING = PUBLIC_KEY.to_string().hex()
+PUBLIC_KEY_STRING = binascii.hexlify(PUBLIC_KEY.to_string()).decode()
 print("Public key: " + PUBLIC_KEY_STRING)
 
 
@@ -68,7 +70,6 @@ class SPVClient:
     '''
     Each SPVClient acts as a wallet, and should have a private and public key.
     The SPVClient should be able to store all the headers of the blockchain. 
-    It can also receive transactions and verify them.
     The SPVClient should also be able to send transactions.
     '''
 
@@ -85,6 +86,59 @@ spv_blockchain = SPVBlockChain()
 spv_client = SPVClient(PRIVATE_KEY, PUBLIC_KEY,
                        PUBLIC_KEY_STRING, spv_blockchain)
 
+@app.route('/request_blockchain_header_hash')
+def request_blockchain_headers():
+    spv_client.spv_blockchain.resolve()
+    return jsonify({"blockchain_headers_hash": spv_client.spv_blockchain.cleaned_keys})
+
+@app.route('/request_full_blockchain')
+def request_full_blockchain():
+    chain = spv_client.spv_blockchain.chain
+    dic_chain = dict()
+    for i in chain:
+        block_dictionary = dict()
+        block = chain[i]
+        block_dictionary["header_hash"] = i
+        block_dictionary["previous_header_hash"] = block.previous_header_hash
+        block_dictionary["hash_tree_root"] = binascii.hexlify(
+            block.hash_tree_root).decode()
+        block_dictionary["timestamp"] = block.timestamp
+        block_dictionary["nonce"] = block.nonce
+        dic_chain[block_dictionary["header_hash"]] = block_dictionary
+    return jsonify(dic_chain)
+
+@app.route('/request_blockchain')
+def request_blockchain():
+    spv_client.spv_blockchain.resolve()
+    cleaned_keys, chain = spv_client.spv_blockchain.cleaned_keys, spv_client.spv_blockchain.chain
+    lst_chain = []
+    for i in cleaned_keys:
+        block_dictionary = dict()
+        block = chain[i]
+        block_dictionary["header_hash"] = i
+        block_dictionary["previous_header_hash"] = block.previous_header_hash
+        block_dictionary["hash_tree_root"] = binascii.hexlify(
+            block.hash_tree_root).decode()
+        block_dictionary["timestamp"] = block.timestamp
+        block_dictionary["nonce"] = block.nonce
+        lst_chain.append(block_dictionary)
+    return jsonify(lst_chain)
+
+@app.route('/request_block/<header_hash>')
+def request_block(header_hash):
+    chain = spv_client.spv_blockchain.chain
+    try:
+        block = chain[header_hash]
+    except:
+        return jsonify("Unable to find block")
+    block_dictionary = dict()
+    block_dictionary["header_hash"] = header_hash
+    block_dictionary["previous_header_hash"] = block.previous_header_hash
+    block_dictionary["hash_tree_root"] = binascii.hexlify(
+        block.hash_tree_root).decode()
+    block_dictionary["timestamp"] = block.timestamp
+    block_dictionary["nonce"] = block.nonce
+    return jsonify(block_dictionary)
 
 @app.route('/block_header', methods=['POST'])
 def new_block_header_network():
@@ -102,14 +156,14 @@ def createTransaction():
     try:
         response = json.loads(requests.get(
             "http://" + miner_ip + "/account_balance/" + spv_client.PUBLIC_KEY_STRING).text)
+        balance = response["amount"]
     except:
-        return jsonify("Cannot find account")
-    balance = response["amount"]
+        return jsonify("Cannot find account or no coins in account yet")
     if balance >= int(amount):
         new_transaction = Transaction(
             spv_client.PUBLIC_KEY, receiver_public_key, int(amount), sender_pk=spv_client.PRIVATE_KEY)
     else:
-        return ("Insufficient balance in account to proceed.")
+        return jsonify("Insufficient balance in account to proceed.")
 
     for miner in LIST_OF_MINER_IP:
         not_sent = True
@@ -123,21 +177,12 @@ def createTransaction():
                 not_sent = False
             except:
                 time.sleep(0.1)
-    not_sent = True
-    while not_sent:
-        try:
-            requests.post(
-                url="http://127.0.0.1:" + MY_PORT + "/transaction",
-                data=new_transaction.to_json()
-            )
-            not_sent = False
-        except:
-            time.sleep(0.1)
     return jsonify(new_transaction.to_json())
 
 
 @app.route('/verify_transaction/<txid>', methods=['GET'])
 def verify_Transaction(txid):
+    print(txid)
     # requests.post(url, headers=headers, data=
     miner_ip = random.choice(LIST_OF_MINER_IP)
     # print(miner_ip, txid)
@@ -164,9 +209,6 @@ def verify_Transaction(txid):
         if entry_dictionary["txid"] != txid:
             return ("Received transaction ID does not match sent TXID.")
 
-        # TODO Check if the root is actually in blockchain by comparing if the hashed header is in the cleaned_keys
-        # TODO We got the dictonary of block headers. Look through this dictionary for the block header using the specific root returned by miner.
-        # TODO After locating the block header, check the cleaned_keys and return the position of the block header in cleaned keys.
         spv_client.spv_blockchain.resolve()
         for count, i in enumerate(spv_client.spv_blockchain.cleaned_keys):
             # Finds corresponding block header
@@ -189,6 +231,16 @@ def request_account_balance(public_key):
         return jsonify(response)
     except:
         return jsonify("Cannot find account")
+
+@app.route('/account_balance')
+def request_my_account_balance():
+    miner_ip = random.choice(LIST_OF_MINER_IP)
+    try:
+        response = json.loads(requests.get(
+            "http://" + miner_ip + "/account_balance/" + PUBLIC_KEY_STRING).text)
+        return jsonify(response)
+    except:
+        return jsonify("No coins in account yet")
 
 
 if __name__ == '__main__':

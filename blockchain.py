@@ -37,18 +37,10 @@ class Block:
 class BlockChain:
     # chain is a dictionary, key is hash header, value is the header metadata of blocks
     chain = dict()
-    TARGET = b"\x00\x00\x0f\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+    TARGET = b"\x00\x00\x0a\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
     last_hash = None
     # Cleaned keys is an ordered list of all the header hashes, only updated on BlockChain.resolve() call
     cleaned_keys = []
-    # Target average time in seconds
-    target_average_time = 3.5
-    # difficulty_constant not used yet
-    difficulty_constant = None
-    # difficulty_interval is the difficulty check per X number of blocks
-    difficulty_interval = 5
-    # difficulty multiplier, ensures difficulty change is linear
-    difficulty_multiplier = 1
     # network cached blocks contain blocks that are rejected, key is prev hash header, value is block
     network_cached_blocks = dict()
 
@@ -192,20 +184,25 @@ class BlockChain:
             # If Genesis block, there is no need to check for the last hash value
             return block.header_hash() < self.TARGET
 
-    def rebroadcast_transactions(self, block):
-        '''rebroadcast transactions from dropped blocks'''
+    def rebroadcast_transactions(self, block, cleared_transactions):
+        '''
+        rebroadcast transactions from dropped blocks
+        Checks cleared_transaction if transaction is already duped in longest chain
+        if it is don't send
+        '''
         transactions = copy.deepcopy(block.transactions.leaf_set)
 
         not_sent = True
         for miner_ip in self.miner_ips:
             for transaction in transactions:
-                while not_sent:
-                    try:
-                        requests.post("http://"+miner_ip +
-                                    "/transaction", data=transaction)
-                        not_sent = False
-                    except:
-                        time.sleep(0.1)
+                if transaction not in cleared_transactions:
+                    while not_sent:
+                        try:
+                            requests.post("http://"+miner_ip +
+                                        "/transaction", data=transaction)
+                            not_sent = False
+                        except:
+                            time.sleep(0.1)
         return True
 
     def find_dropped_blocks(self):
@@ -213,7 +210,11 @@ class BlockChain:
         for hash_value in self.chain:
             if hash_value not in self.cleaned_keys:
                 dropped_blocks[hash_value] = self.chain[hash_value]
-        return dropped_blocks
+        cleared_transactions = []
+        for hash_value in self.cleaned_keys:
+            for i in self.chain[hash_value].transactions.leaf_set:
+                cleared_transactions.append(i)
+        return dropped_blocks, cleared_transactions
 
     def resolve(self):
         if len(self.chain) > 0:
@@ -233,12 +234,12 @@ class BlockChain:
             except IndexError:
                 self.last_hash = None
 
-            dropped_blocks = self.find_dropped_blocks()
+            dropped_blocks, cleared_transactions = self.find_dropped_blocks()
             for _, block in dropped_blocks.items():
                 rebroadcasted = False
                 while not rebroadcasted:
                     # retry rebroadcasting until it succeeds
-                    rebroadcasted = self.rebroadcast_transactions(block)
+                    rebroadcasted = self.rebroadcast_transactions(block, cleared_transactions)
                 
 
     def resolve_DP(self, hash_check, score, cleared_hashes):
