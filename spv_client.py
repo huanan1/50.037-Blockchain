@@ -123,16 +123,6 @@ def createTransaction():
                 not_sent = False
             except:
                 time.sleep(0.1)
-    not_sent = True
-    while not_sent:
-        try:
-            requests.post(
-                url="http://127.0.0.1:" + MY_PORT + "/transaction",
-                data=new_transaction.to_json()
-            )
-            not_sent = False
-        except:
-            time.sleep(0.1)
     return jsonify(new_transaction.to_json())
 
 
@@ -164,9 +154,6 @@ def verify_Transaction(txid):
         if entry_dictionary["txid"] != txid:
             return ("Received transaction ID does not match sent TXID.")
 
-        # TODO Check if the root is actually in blockchain by comparing if the hashed header is in the cleaned_keys
-        # TODO We got the dictonary of block headers. Look through this dictionary for the block header using the specific root returned by miner.
-        # TODO After locating the block header, check the cleaned_keys and return the position of the block header in cleaned keys.
         spv_client.spv_blockchain.resolve()
         for count, i in enumerate(spv_client.spv_blockchain.cleaned_keys):
             # Finds corresponding block header

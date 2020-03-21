@@ -113,7 +113,7 @@ for count, i in enumerate(list_of_miner_ports):
 
 for count, i in enumerate(list_of_spv_ports):
     os.system("python3 spv_client.py -p {0} -m miner_ip.txt -w {1}&".format(
-        i, "WALLET_KEY"))
+        i, list_of_spv_wallets[count]))
 
 time.sleep(1*(len(list_of_miner_ports) + len(list_of_spv_ports)))
 

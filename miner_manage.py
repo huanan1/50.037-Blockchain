@@ -403,5 +403,5 @@ if __name__ == '__main__':
     p = Process(target=start_mining, args=(block_queue, transaction_queue,
                                            blockchain_request_queue, blockchain_reply_queue,))
     p.start()
-    app.run(host='0.0.0.0', debug=True, use_reloader=False, port=MY_PORT)
+    app.run(debug=True, use_reloader=False, port=MY_PORT)
     p.join()
