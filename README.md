@@ -34,9 +34,9 @@ Implemented features:
 - forks resolved
   - Example:
   - ![fork](https://user-images.githubusercontent.com/28921108/77232316-36d28e80-6bdb-11ea-83a9-4d76e346a78e.png)
-  red miner originally had the block `0000ae565b` after `000044cc2f` while white miner had the block `00006e7b8c`. The fork is only resolved when one chain becomes longer so the miner who mined a block on the short chain will drop it and work on the longer chain instead
+  red miner originally had the block `0000ae565b` after `000044cc2f` while white miner had the block `00006e7b8c`. The fork is only resolved when one chain becomes longer. The miner(s) with the shorter chain will stop mining on that chain and work on the longer one instead.
   - ![fork_resolved](https://user-images.githubusercontent.com/28921108/77232319-3934e880-6bdb-11ea-83b1-35d231c8def1.png)
-  in this case, the red miner dropped his original block (`0000ae56fb` and adopts the longer chain which builts on white's mined block)
+  in this case, the red miner stopped working on a chain with his original block (`0000ae56fb`) and adopts the longer chain which builts on white's mined block (`00006e7b8c`)
 
 ### Interaction of SPV clients with miners
 Implemented features:
