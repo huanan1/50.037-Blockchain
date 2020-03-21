@@ -28,6 +28,7 @@ Implemented features:
 - coinbase transaction of 100 SUTDcoins
   - under `create_merkle` method in `miner.py`
 - transactions occur randomly
+  - see `random_transactions.py`
 - validation checks (no double spending, validated sender, sender must have enough money)
   - see `network_block` method in `blockchain.py`
 - forks resolved
