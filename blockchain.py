@@ -37,7 +37,7 @@ class Block:
 class BlockChain:
     # chain is a dictionary, key is hash header, value is the header metadata of blocks
     chain = dict()
-    TARGET = b"\x00\x00\x0f\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+    TARGET = b"\x00\x00\x0a\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
     last_hash = None
     # Cleaned keys is an ordered list of all the header hashes, only updated on BlockChain.resolve() call
     cleaned_keys = []
