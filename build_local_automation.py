@@ -74,20 +74,10 @@ for i in list_of_spv_ips:
     f.write(i+"\n")
 f.close()
 
-if not SELFISH:
-    f = open("miner_ip.txt", "w+")
-    for i in list_of_miner_ips:
-        f.write(i+"\n")
-    f.close()
-elif SELFISH:
-    f = open("miner_ip.txt", "w+")
-    count = 0
-    for i in list_of_miner_ips:
-        count += 1
-        f.write(i+"\n")
-        if count >= 2:
-            break
-    f.close()
+f = open("miner_ip.txt", "w+")
+for i in list_of_miner_ips:
+    f.write(i+"\n")
+f.close()
 
 # Color args
 colors = ['w', 'r', 'g', 'y', 'b', 'm', 'c']
@@ -110,15 +100,12 @@ for count, i in enumerate(list_of_miner_ports):
         else:
             break
     elif SELFISH:
-        print("Restricting to only 2 miners for demostration.")
         if count == 0:
             os.system("python3 miner_manage.py -p {0} -m miner_ip.txt -s spv_ip.txt -c r -w {1} -d 2 -f 1&".format(
                 i, list_of_miner_wallets[count]))
-        elif count == 1:
+        else:
             os.system("python3 miner_manage.py -p {0} -m miner_ip.txt -s spv_ip.txt -c g -w {1} -d 2&".format(
                 i, list_of_miner_wallets[count]))
-        else:
-            break
     else:
         print("Wait, how did you reach here?")
     # Removes file for cleanup

@@ -32,9 +32,9 @@ while True:
     except:
         amt_selfish = 0
     try:
-        amt_honest = json.loads(requests.get(
+        amt_honest_1 = json.loads(requests.get(
         "http://{}/account_balance".format(list_of_ips[1])).text)["amount"]
     except:
-        amt_honest = 0
-    print("Selfish miner: {} coins\tHonest miner: {} coins".format(amt_selfish, amt_honest))
+        amt_honest_1 = 0
+    print("Selfish miner: {} coins\tHonest miner: {} coins".format(amt_selfish, amt_honest_1))
     time.sleep(1)

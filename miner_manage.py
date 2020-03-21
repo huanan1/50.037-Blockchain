@@ -118,8 +118,8 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
     # merkletree = create_sample_merkle()
     miner_status = False
     list_of_blocks_selfish = []
-    SELFISH_LENGTH = 3
-    list_of_collectd_selfish_blocks = []
+    SELFISH_LENGTH = 2
+    list_of_collected_selfish_blocks = []
     selfish_flush = False
     # Infinite loop
     while True:
@@ -200,11 +200,10 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                     if not SELFISH:
                         miner.network_block(new_block)
                     elif SELFISH:
-                        list_of_collectd_selfish_blocks.append(new_block)
-                        print(list_of_collectd_selfish_blocks)
-                        if len(list_of_collectd_selfish_blocks) >= SELFISH_LENGTH or selfish_flush:
-                            for i in list_of_collectd_selfish_blocks:
-                                miner.network_block(new_block)
+                        list_of_collected_selfish_blocks.append(new_block)
+                        if len(list_of_collected_selfish_blocks) > SELFISH_LENGTH or selfish_flush:
+                            for i in list_of_collected_selfish_blocks:
+                                miner.network_block(i)
                             for block in list_of_blocks_selfish:
                                 block_data = pickle.dumps(block, protocol=2)
                                 for miner_ip in LIST_OF_MINER_IP:
@@ -217,7 +216,8 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                                             send_failed = False
                                         except:
                                             time.sleep(0.1)
-                            list_of_collectd_selfish_blocks = []
+                            miner.blockchain.resolve()
+                            list_of_collected_selfish_blocks = []
                             list_of_blocks_selfish = []
                             selfish_flush = False
                     mine_or_recv += binascii.hexlify(
