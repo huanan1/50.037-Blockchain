@@ -156,14 +156,14 @@ def createTransaction():
     try:
         response = json.loads(requests.get(
             "http://" + miner_ip + "/account_balance/" + spv_client.PUBLIC_KEY_STRING).text)
+        balance = response["amount"]
     except:
-        return jsonify("Cannot find account")
-    balance = response["amount"]
+        return jsonify("Cannot find account or no coins in account yet")
     if balance >= int(amount):
         new_transaction = Transaction(
             spv_client.PUBLIC_KEY, receiver_public_key, int(amount), sender_pk=spv_client.PRIVATE_KEY)
     else:
-        return ("Insufficient balance in account to proceed.")
+        return jsonify("Insufficient balance in account to proceed.")
 
     for miner in LIST_OF_MINER_IP:
         not_sent = True
