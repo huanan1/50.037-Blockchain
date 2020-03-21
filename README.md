@@ -22,16 +22,23 @@ All demonstrations can either be done locally or across multiple computers. The 
 
 ## Documentation of displayed features
 ###	Simulate miners running Nakamoto consensus and making transactions
-_these are the features we're supposed to implement I'm just putting it here_
-Features:
+Implemented features:
 - new blocks arrive every few (2-5) seconds
+  - static difficulty of `00000f`
 - coinbase transaction of 100 SUTDcoins
-- transactions occur
+  - under `create_merkle` method in `miner.py`
+- transactions occur randomly
 - validation checks (no double spending, validated sender, sender must have enough money)
+  - see `network_block` method in `blockchain.py`
 - forks resolved
+  - Example:
+  - ![fork](https://user-images.githubusercontent.com/28921108/77232316-36d28e80-6bdb-11ea-83a9-4d76e346a78e.png)
+  red miner originally had the block `0000ae565b` after `000044cc2f` while white miner had the block `00006e7b8c`. The fork is only resolved when one chain becomes longer so the miner who mined a block on the short chain will drop it and work on the longer chain instead
+  - ![fork_resolved](https://user-images.githubusercontent.com/28921108/77232319-3934e880-6bdb-11ea-83b1-35d231c8def1.png)
+  in this case, the red miner dropped his original block (`0000ae56fb` and adopts the longer chain which builts on white's mined block)
 
 ### Interaction of SPV clients with miners
-_these are the features we're supposed to implement I'm just putting it here_
+Implemented features:
 - associated key pairs
 - receive block headers
 - receive transactions and verify them
