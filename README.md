@@ -57,6 +57,31 @@ Implemented features:
 - Block following `000005d864` was originally `000005b93b` but is `0000061ea` after attack
 
 ### Selish-mining
+| Selfish miner    | Honest miner       |
+|------------------|--------------------|
+| 0 coins     | 0 coins    |
+| 0 coins     | 0 coins    |
+| 0 coins     | 0 coins    |
+| 300 coins   | 0 coins    |
+| 700 coins   | 500 coins  |
+| 1100 coins  | 800 coins  |
+| 1400 coins  | 1000 coins |
+| 1800 coins  | 1200 coins |
+| 2300 coins  | 1400 coins |
+| 2700 coins  | 200 coins  |
+| 3000 coins  | 400 coins  |
+| 3500 coins  | 200 coins  |
+| 3900 coins  | 500 coins  |
+| 4300 coins  | 200 coins  |
+| 4500 coins  | 300 coins  |
+| 4800 coins  | 600 coins  |
+| 5200 coins  | 800 coins  |
+| 5700 coins  | 200 coins  |
+| 6200 coins  | 200 coins  |
+| 6600 coins  | 200 coins  |
+| 7100 coins  | 200 coins  |
+- __DESCRIPTION of what a selfish miner does, how it manages to win despite not necesarily having majority hashing power__
+
 
 ## Major differences between Bitcoin and SUTDcoin
 | Property           | Bitcoin                               | SUTDcoin                 |
