@@ -41,14 +41,6 @@ class BlockChain:
     last_hash = None
     # Cleaned keys is an ordered list of all the header hashes, only updated on BlockChain.resolve() call
     cleaned_keys = []
-    # Target average time in seconds
-    target_average_time = 3.5
-    # difficulty_constant not used yet
-    difficulty_constant = None
-    # difficulty_interval is the difficulty check per X number of blocks
-    difficulty_interval = 5
-    # difficulty multiplier, ensures difficulty change is linear
-    difficulty_multiplier = 1
     # network cached blocks contain blocks that are rejected, key is prev hash header, value is block
     network_cached_blocks = dict()
 
