@@ -71,6 +71,7 @@ class SPVClient:
     Each SPVClient acts as a wallet, and should have a private and public key.
     The SPVClient should be able to store all the headers of the blockchain. 
     The SPVClient should also be able to send transactions.
+    The SPVClient receive transactions and verify them
     '''
 
     def __init__(self, private_key, public_key, public_key_string, spv_blockchain):
