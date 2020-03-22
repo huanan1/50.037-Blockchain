@@ -341,7 +341,6 @@ def request_full_blockchain():
             block.hash_tree_root).decode()
         block_dictionary["timestamp"] = block.timestamp
         block_dictionary["nonce"] = block.nonce
-        # TODO Modify transactions when the real transactions come
         transaction_list = []
         for i in block.transactions.leaf_set:
             transaction_list.append(i.decode())
