@@ -56,11 +56,11 @@ Sample startup:
 
 ### SPVClient
 `spv_client.py`
-| Argument          | Description                                                | Example      | Additional Notes                                                                         |
-| ----------------- | ---------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------- |
-| -p, --port        | Port number of SPV to run on                             | 25200        | **(Mandatory)**                                                                          |
-| -m, --iminerfile  | Directory of list of other miner IPs (10.0.2.5:2134)       | miner_ip.txt | **(Mandatory)**                                                                           |
-| -w, --wallet      | Sets the wallet's private key. If empty, generates new key | b0cfe80...   | **(Optional)**                                                                           |
+| Argument         | Description                                                | Example      | Additional Notes |
+| ---------------- | ---------------------------------------------------------- | ------------ | ---------------- |
+| -p, --port       | Port number of SPV to run on                               | 25200        | **(Mandatory)**  |
+| -m, --iminerfile | Directory of list of other miner IPs (10.0.2.5:2134)       | miner_ip.txt | **(Mandatory)**  |
+| -w, --wallet     | Sets the wallet's private key. If empty, generates new key | b0cfe80...   | **(Optional)**   |
 
 Sample startup:
 - `spv_client.py -p 2300 -m miner_ip.txt`
@@ -69,14 +69,16 @@ Sample startup:
 ## Endpoints
 
 #### /request_blockchain_header_hash
-`GET`
+
+`GET` `/request_blockchain_header_hash`
 
 **Miner** and **SPV**
 
 Returns an ordered list of header hashes of the longest chain from genesis block
 
+------
 #### /request_blockchain
-`GET`
+`GET` `/request_blockchain`
 
 **Miner** and **SPV**
 
@@ -84,8 +86,9 @@ Returns an ordered list of blocks of the longest chain from genesis block
 
 **Note:** Miner includes list of ordered transactions for every block, while SPV does not
 
+------
 #### /request_full_blockchain
-`GET`
+`GET` `/request_full_blockchain`
 
 **Miner** and **SPV**
 
@@ -93,10 +96,9 @@ Returns an ordered list of blocks of the longest chain from genesis block
 
 **Note:** Miner includes list of ordered transactions for every block, while SPV does not
 
+------
 #### /request_block/<header_hash>
-`GET`
-
-`/request_block/00000058867c95e45874590d1588aeb589b852bba48cdd5021e9ea5fda76457d`
+`GET` `/request_block/00000058867c95e45874590d1588aeb589b852bba48cdd5021e9ea5fda76457d`
 
 **Miner** and **SPV**
 
@@ -104,8 +106,9 @@ Returns full information for that particular block
 
 **Note:** Miner includes list of ordered transactions, while SPV does not
 
+------
 #### /account_balance
-`GET`
+`GET` `/account_balance`
 
 **Miner** and **SPV**
 
@@ -113,10 +116,9 @@ Returns amount of coins in the queried SPV or Miner's wallet
 
 **Note:** Miner will retrieve information locally, while SPV will ask a random full node/Miner
 
+------
 #### /account_balance/<public_key>
-`GET`
-
-`/account_balance/c0af4cd2f20cebccea8bedb0a7841d373cc51166ebbac05e`
+`GET` `/account_balance/c0af4cd2f20cebccea8bedb0a7841d373cc51166ebbac05e`
 
 **Miner** and **SPV**
 
@@ -124,19 +126,17 @@ Returns amount of coins in that particular account
 
 **Note:** Miner will retrieve information locally, while SPV will ask a random full node/Miner
 
+------
 #### /send_transaction?receiver=<receiver>&amount=<amount>
-`POST`
-
-`/send_transaction?receiver=76d0551750414d853b0b6348b9da12352cf5ba36b2cd72ffbece44dfd162d1153dc85d643b4438c43bd4e841f4083012&amount=34`
+`POST` `/send_transaction?receiver=76d0551750414d853b0b6348b9da12352cf5ba36b2cd72ffbece44dfd162d1153dc85d643b4438c43bd4e841f4083012&amount=34`
 
 **Miner** and **SPV**
 
 Submits transaction to the network to be processed
 
+------
 #### /verify_transaction/<txid>
-`GET`
-
-`/verify_transaction/3c06ac050125b8e733fcfd0daafe081fe573142d68c317a29f9d0a86ba8cc83d`
+`GET` `/verify_transaction/3c06ac050125b8e733fcfd0daafe081fe573142d68c317a29f9d0a86ba8cc83d`
 
 **Miner** and **SPV**
 
@@ -144,8 +144,9 @@ Returns information about the particular transactions, including number of confi
 
 **Note:** Miner will retrieve and verify locally, while SPV will ask a random full node/Miner for merkle tree's proof and verify locally with the merkle tree root and header hashes
 
+------
 #### /verify_transaction_from_spv
-`POST`
+`POST` `/verify_transaction_from_spv`
 
 **Not meant to be accessed by user**
 
@@ -153,8 +154,9 @@ Returns information about the particular transactions, including number of confi
 
 Called by SPV to get the merkle tree proof data from Miner
 
+------
 #### /block
-`POST`
+`POST` `/block`
 
 **Not meant to be accessed by user**
 
@@ -162,15 +164,19 @@ Called by SPV to get the merkle tree proof data from Miner
 
 Called by other Miners, able to receive Block objects as Pickles from other Miners in body
 
+------
 #### /transaction
-`POST`
+`POST` `/transaction`
 
 **Not meant to be accessed by user**
 
+**Miner** only
+
 Called by other Miners and SPV, able to receive Transactions as json in body
 
+------
 #### /block_header
-`POST`
+`POST` `/block_header`
 
 **Not meant to be accessed by user**
 
@@ -250,10 +256,10 @@ Implemented features:
 
 
 ## Major differences between Bitcoin and SUTDcoin
-| Property                     | Bitcoin                                   | SUTDcoin        |
-| ---------------------------- | ----------------------------------------- | --------------- |
-| Name                         | Bitcoin                                   | SUTDcoin        |
-| Difficulty                   | Dynamic, adjusts every 2 weeks            | Static          |
-| Transaction model            | UTXO                                      | Address:Balance |
-| Peer2Peer network            | Peer discovery must happen                | All miners know the presence of all other miners | 
-| Block headers for SPVClients | Query network nodes to find longest chain | Obtained from spv blockchain |
+| Property                     | Bitcoin                                   | SUTDcoin                                         |
+| ---------------------------- | ----------------------------------------- | ------------------------------------------------ |
+| Name                         | Bitcoin                                   | SUTDcoin                                         |
+| Difficulty                   | Dynamic, adjusts every 2 weeks            | Static                                           |
+| Transaction model            | UTXO                                      | Address:Balance                                  |
+| Peer2Peer network            | Peer discovery must happen                | All miners know the presence of all other miners |
+| Block headers for SPVClients | Query network nodes to find longest chain | Obtained from spv blockchain                     |
