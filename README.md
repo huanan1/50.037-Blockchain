@@ -1,5 +1,4 @@
 # Group: GOLD EXPERIENCE
-*Yes, the group name is a Jojo reference*
 ## SUTDcoin
 ## Setting up the environment
 ```
