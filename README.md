@@ -28,6 +28,7 @@ Both `ports_miner.txt` and `ports_spv.txt` have identical formats.
 
 The format in the current repo is as follows:
 `<port_number>\t<private_key>\t<public_key>\n`
+
 **Note:** Ensure 'tab character' is in between each field, as some IDEs might do 4 spaces
 
 - `<port_number>` field is mandatory, and the code will run as many instances as there are ports in the file
@@ -37,7 +38,7 @@ The format in the current repo is as follows:
 ### Network deployment
 There are two kinds of clients to be deployed, miners and SPV clients, using `miner_manage.py` and `spv_client.py` respectively.
 
-### Miner
+#### Miner
 `miner_manage.py`
 | Argument          | Description                                                | Example      | Additional Notes                                                                         |
 | ----------------- | ---------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------- |
@@ -50,15 +51,11 @@ There are two kinds of clients to be deployed, miners and SPV clients, using `mi
 | -w, --wallet      | Sets the wallet's private key, if empty, generates new key | b0cfe80...   | **(Optional)**                                                                           |
 
 Sample startup:
+- `miner_manage.py -p 2200`
+- `miner_manage.py -p 1500 -m miner_ip.txt -c g -s spv_ip.txt -d 2 -w b0cfe80dbda0d882b6d517321b3eb3343c48864ad097c5df`
+- `miner_manage.py -p 1200 -m miner_ip.txt -c r -f 1`
 
-`miner_manage.py -p 2200`
-
-`miner_manage.py -p 1500 -m miner_ip.txt -c g -s spv_ip.txt -d 2 -w 
-b0cfe80dbda0d882b6d517321b3eb3343c48864ad097c5df`
-
-`miner_manage.py -p 1200 -m miner_ip.txt -c r -f 1`
-
-### Miner
+#### SPV
 `spv_client.py`
 | Argument          | Description                                                | Example      | Additional Notes                                                                         |
 | ----------------- | ---------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------- |
@@ -67,10 +64,8 @@ b0cfe80dbda0d882b6d517321b3eb3343c48864ad097c5df`
 | -w, --wallet      | Sets the wallet's private key, if empty, generates new key | b0cfe80...   | **(Optional)**                                                                           |
 
 Sample startup:
-
-`spv_client.py -p 2300 -m miner_ip.txt`
-
-`spv_client.py -p 1500 -m miner_ip.txt -w c218953cd1e1ebff4cead74f25420dcffd6239ed1f48796f`
+- `spv_client.py -p 2300 -m miner_ip.txt`
+- `spv_client.py -p 1500 -m miner_ip.txt -w c218953cd1e1ebff4cead74f25420dcffd6239ed1f48796f`
 
 
 ## Documentation of displayed features
