@@ -92,7 +92,7 @@ Returns an ordered list of blocks of the longest chain from genesis block
 
 **Miner** and **SPV**
 
-Returns an ordered list of blocks of the longest chain from genesis block
+Returns an unordered list of all blocks within client
 
 **Note:** Miner includes list of ordered transactions for every block, while SPV does not
 
