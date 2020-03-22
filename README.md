@@ -75,7 +75,7 @@ Implemented features:
 - coinbase transaction of 100 SUTDcoins
   - under `create_merkle` method in `miner.py`
 - transactions occur randomly
-  - see `utility/random_transactions.py`
+  - see `random_transactions.py`
 - validation checks (no double spending, validated sender, sender must have enough money)
   - see `network_block` method in `blockchain.py`
 - forks resolved
@@ -94,6 +94,13 @@ Implemented features:
 - receive and verify transactions
 - send transactions
 
+### Ledger
+Implemented features:
+- Dictionary that stores public key as keys and account balance as values
+- Verifies transactions in the transaction queue
+- Updates account values accordingly when all transactions in the queue are verified
+- Creates new keys for new recipients
+- Rejects transactions when sender does not exist in ledger
 
 ### Double-spending attack
 1. At a specified block in the code, the attacker will send a transaction.
@@ -136,3 +143,4 @@ Implemented features:
 | Name              | Bitcoin                                                               | SUTDcoin        |
 | Difficulty        | Dynamic, adjusts every 2 weeks                                        | Static          |
 | Transaction model | UTXO                                                                  | Address:Balance |
+| Peer2Peer network | Peer discovery must happen                                            | All miners know the presence of all other miners | 
