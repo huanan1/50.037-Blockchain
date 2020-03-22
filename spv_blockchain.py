@@ -12,7 +12,7 @@ import copy
 
 class SPVBlock:
     def __init__(self, block):
-        # Instantiates object from passed values
+        # Same as Block class except without transactions and stores block header hashes
         self.previous_header_hash = block.previous_header_hash  # Previous hash in string
         self.hash_tree_root = block.hash_tree_root  # tree root in bytes
         self.timestamp = block.timestamp  # unix time in string
@@ -21,16 +21,16 @@ class SPVBlock:
 
 
 class SPVBlockChain:
-    # chain is a dictionary, key is hash header, value is the header metadata of blocks
+    # chain is a dictionary -> {hash header (key): header metadata of blocks (value)}
     chain = dict()
     last_hash = None
-    # Cleaned keys is an ordered list of all the header hashes, only updated on SPVBlockChain.resolve() call
+    # cleaned_keys is an ordered list of all the header hashes, only updated on BlockChain.resolve() call
     cleaned_keys = []
-    # network cached blocks contain blocks that are rejected, key is prev hash header, value is block
+    # network_cached_blocks is a dictionary that contains blocks that are rejected ->  {prev hash header (key): block (value)}
     network_cached_blocks = dict()
 
     def network_add(self, spv_block):
-        # check for genesis block
+        # Check for genesis block
         self.chain[spv_block.header_hash] = spv_block
 
     def resolve(self):
@@ -54,7 +54,7 @@ class SPVBlockChain:
     def resolve_DP(self, hash_check, score, cleared_hashes):
         # Assuming this is the last block in the chain, it first saves itself to the list
         list_of_linked_hashes = [(score, cleared_hashes)]
-        # Scans the chain for a block with previous_header of the header of the previous block that called the DP
+        # Scans the chain for a block with previous_header in the header of the previous block that called the DP
         for hash_value in self.chain:
             if self.chain[hash_value].previous_header_hash == hash_check:
                 new_cleared_hashes = copy.deepcopy(cleared_hashes)
