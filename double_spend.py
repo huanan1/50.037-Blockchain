@@ -99,7 +99,7 @@ def start_mining(block_queue, transaction_queue, public_key, private_key):
     blockchain = BlockChain([args.ip_other])
     miner = Miner(blockchain, public_key)
     miner_status = False  # whether miner is ready to send
-    # variables for double-spending attack #
+    # variables for double-spending attack 
     start_attack = False
     announced_attack = False
     cease_attacks = False

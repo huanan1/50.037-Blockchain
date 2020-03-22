@@ -121,15 +121,3 @@ def verify_proof(entry, proof, root):
 
 
 merkletree = MerkleTree()
-
-# for i in range(4):
-#     merkletree.add(str(random.randint(100, 1000)))
-# merkletree.add(str(453))
-# # for i in range(50):
-# #     merkletree.add(random.randint(100, 1000))
-
-# merkletree.build()
-# print(merkletree.get_proof(str(453)))
-# print(merkletree.get_proof(str(453)),  binascii.hexlify(merkletree.get_root()).decode())
-# print(binascii.hexlify(merkletree.get_root()).decode(), binascii.unhexlify(bytes(binascii.hexlify(merkletree.get_root()).decode(), 'utf-8')))
-# print(verify_proof(str(453), merkletree.get_proof(str(453)), merkletree.get_root()))

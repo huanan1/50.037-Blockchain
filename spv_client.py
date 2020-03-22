@@ -148,7 +148,6 @@ def request_block(header_hash):
 
 @app.route('/block_header', methods=['POST'])
 def new_block_header_network():
-    # print("received block")
     new_block_header = pickle.loads(request.get_data())
     spv_client.spv_blockchain.network_add(new_block_header)
     return ""
@@ -188,10 +187,7 @@ def createTransaction():
 
 @app.route('/verify_transaction/<txid>', methods=['GET'])
 def verify_Transaction(txid):
-    print(txid)
-    # requests.post(url, headers=headers, data=
     miner_ip = random.choice(LIST_OF_MINER_IP)
-    # print(miner_ip, txid)
     try:
         response = json.loads(requests.post(
             "http://" + miner_ip + "/verify_transaction_from_spv", data=txid).text)
@@ -207,11 +203,9 @@ def verify_Transaction(txid):
             proof_bytes.append(
                 [i[0], binascii.unhexlify(bytes(i[1], 'utf-8'))])
     root_bytes = binascii.unhexlify(bytes(response["root"], 'utf-8'))
-    # print(entry, proof_bytes, root_bytes)
     verify = verify_proof(entry, proof_bytes, root_bytes)
     entry_dictionary = json.loads(entry)
     if verify:
-        # TODO check if response has the same TXID
         if entry_dictionary["txid"] != txid:
             return ("Received transaction ID does not match sent TXID.")
 
@@ -219,12 +213,11 @@ def verify_Transaction(txid):
         for count, i in enumerate(spv_client.spv_blockchain.cleaned_keys):
             # Finds corresponding block header
             if spv_client.spv_blockchain.chain[i].hash_tree_root == root_bytes:
-                # reply = {"Position in cleaned_keys": (len(spv_blockchain.cleaned_keys) - count)} # Returns the position of block header in cleaned_keys
+                # Returns the position of block header in cleaned_keys
                 reply = {"entry": entry, "proof": proof_string, "root": binascii.hexlify(root_bytes).decode(
                 ), "verify": True, "confirmations": (len(spv_client.spv_blockchain.cleaned_keys) - count), "block_header": i}
                 return jsonify(reply)
         return jsonify("No block headers found.")
-    # finally:
     return jsonify("TXID not found")
 
 

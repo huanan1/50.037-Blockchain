@@ -22,7 +22,6 @@ class Miner:
         if self.blockchain.add(block):
             # If the add is successful, reset
             self.reset_new_mine()
-            # print(MY_IP)
             return True
         # Increase nonce everytime the mine fails
         self.nonce += 1
@@ -56,20 +55,16 @@ class Miner:
             return False
 
     def create_merkle(self, transaction_queue, tx_to_ignore=None):
-        # print("entered create merkel")
         block = self.blockchain.last_block()
         if block is None:
             ledger = Ledger()
-            # print("ledger for genesis block")
         else:
             ledger = block.ledger
-            # print("ledger for non-genesis block: " + json.dumps(block.ledger.balance))
         list_of_raw_transactions = []
         list_of_validated_transactions = []
         while not transaction_queue.empty():
             list_of_raw_transactions.append(
                 transaction_queue.get())
-        # print("length", len(list_of_raw_transactions))
         for transaction in list_of_raw_transactions:
             if tx_to_ignore is not None and transaction in tx_to_ignore:
                 print(f"ignoring transaction: {transaction}")
@@ -83,7 +78,6 @@ class Miner:
         merkletree.add(Transaction(coinbase_sender_vk, self.public_key,
                                    100, sender_pk=coinbase_sender_pk).to_json())
         ledger.coinbase_transaction(self.public_key_str)
-        # print("merkel tree has been created" + json.dumps(ledger.balance))
 
         for transaction in list_of_validated_transactions:
             transaction_object = transaction.to_json()

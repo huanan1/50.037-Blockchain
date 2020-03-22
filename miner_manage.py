@@ -116,7 +116,6 @@ PUBLIC_KEY_STRING = binascii.hexlify(PUBLIC_KEY.to_string()).decode()
 def start_mining(block_queue, transaction_queue, blockchain_request_queue, blockchain_reply_queue):
     blockchain = BlockChain(LIST_OF_MINER_IP)
     miner = Miner(blockchain, PUBLIC_KEY)
-    # merkletree = create_sample_merkle()
     miner_status = False
     list_of_blocks_selfish = []
     SELFISH_LENGTH = 5
@@ -124,13 +123,10 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
     selfish_flush = False
     # Infinite loop
     while True:
-        #merkletree, ledger = create_sample_merkle()
         # create a merkel tree from transaction queue
         merkletree, ledger = miner.create_merkle(transaction_queue)
-        # print("merkel created")
 
         while True:
-            # print(LIST_OF_MINER_IP)
             # Mines the nonce every round
             miner_status = miner.mine(merkletree, ledger)
             mine_or_recv = ""
@@ -236,7 +232,6 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
         # Section run if the miner found a block or receives a block that has been broadcasted
         print(COLOR + "Public key: {}\n".format(PUBLIC_KEY_STRING) + "PORT: {}\n".format(MY_PORT) + mine_or_recv + "\n" +
               (str(miner.blockchain) if MODE == 1 else str(miner.blockchain).split("~~~\n")[1]))
-        # merkletree = create_merkle(transaction_queue)
 
 
 # Queue objects for passing stuff between processes
@@ -255,7 +250,6 @@ def new_block_network():
 
 @app.route('/transaction', methods=['POST'])
 def new_transaction_network():
-    # print(request.data)
     new_transaction = Transaction.from_json(request.data.decode())
     transaction_queue.put(new_transaction)
     return ""
@@ -268,10 +262,8 @@ def verify_Transaction(txid):
     cleaned_keys, chain = blockchain_tuple[0], blockchain_tuple[1]
     for count, i in enumerate(cleaned_keys):
         merkle_tree = chain[i].transactions
-        # print(i, merkle_tree.leaf_set)
         for j in merkle_tree.leaf_set:
             if json.loads(j.decode())["txid"] == txid:
-                # reply = json.loads(j.decode())
                 proof_bytes = merkle_tree.get_proof(j.decode())
                 proof_string = []
                 for k in proof_bytes:
@@ -285,7 +277,6 @@ def verify_Transaction(txid):
                 reply = {"entry": j.decode(), "proof": proof_string, "root": root_string, "verify": verify_proof(
                     j.decode(), proof_bytes, root_bytes), "confirmations": (len(cleaned_keys) - count), "block_header": i}
                 return jsonify(reply)
-        # print(merkle_tree.leaf_set)
     return jsonify("No TXID found.")
 
 
@@ -297,10 +288,8 @@ def verify_transaction_from_spv():
     cleaned_keys, chain = blockchain_tuple[0], blockchain_tuple[1]
     for count, i in enumerate(cleaned_keys):
         merkle_tree = chain[i].transactions
-        # print(i, merkle_tree.leaf_set)
         for j in merkle_tree.leaf_set:
             if json.loads(j.decode())["txid"] == data:
-                # reply = json.loads(j.decode())
                 proof_bytes = merkle_tree.get_proof(j.decode())
                 proof_string = []
                 for k in proof_bytes:
@@ -311,12 +300,9 @@ def verify_transaction_from_spv():
                             [k[0], binascii.hexlify(k[1]).decode()])
                 root_bytes = merkle_tree.get_root()
                 root_string = binascii.hexlify(root_bytes).decode()
-                # print ("verify", verify_proof(j.decode(), proof_bytes, root_bytes))
                 reply = {"entry": j.decode(), "proof": proof_string,
                          "root": root_string}
                 return jsonify(reply)
-                # reply["confirmations"] = len(len(cleaned_keys)- count)
-        # print(merkle_tree.leaf_set)
     return ""
 
 

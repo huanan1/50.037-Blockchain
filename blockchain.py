@@ -85,10 +85,8 @@ class BlockChain:
             time.sleep(0.05)
             # Looks through cached blocks
             self.network_add_cached_blocks(self.network_cached_blocks)
-            # print("finished looking through cached blocks")
             return True
         else:
-            # print("\nSaved in cache: ", binascii.hexlify(block.header_hash()).decode(), self.chain)
             self.network_cached_blocks[binascii.hexlify(
                 block.header_hash()).decode()] = copy.deepcopy(block)
             return False
@@ -102,7 +100,6 @@ class BlockChain:
             # delete all added blocks and empty list
             for header in added:
                 del cached_blocks[header]
-                # print(f"here's the cache:{cached_blocks} after deleting header:{header}")
             added = []
             for cached_header in cached_blocks:
                 next_block = cached_blocks[cached_header]
@@ -128,7 +125,6 @@ class BlockChain:
                 prev_hash_temp = self.chain[prev_hash_temp].previous_header_hash
                 chain_uptil_prev.append(prev_hash_temp)
             except KeyError:
-                # print(f"there's no such hash: {prev_hash_temp} in the chain")
                 return False
             if prev_hash_temp == None:
                 chain_uptil_prev.append(prev_hash_temp)
@@ -181,7 +177,6 @@ class BlockChain:
             # Checks for previous header and target value
             check_previous_header = block.previous_header_hash in self.chain or block.previous_header_hash is None
             check_target = block.header_hash() < self.TARGET
-            # print(check_previous_header, check_target)
             return check_previous_header and check_target
         else:
             # If Genesis block, there is no need to check for the last hash value
@@ -320,12 +315,8 @@ class Ledger:
         except:
             return 0
 
-    # new_transaction, validated_transaction from create_merkel
-    # transactions: validated transactions in existing blocks
-    # def verify_transaction(self, new_transaction, validated_transactions, transactions, prev_header_hash, blockchain):
     def verify_transaction(self, new_transaction, validated_transactions, last_header_hash, blockchain):
 
-        # transactions = copy.deepcopy(transactions)
         validated_transactions = copy.deepcopy(validated_transactions)
         for i, transaction in enumerate(validated_transactions):
             try:
@@ -365,38 +356,15 @@ class Ledger:
                 return False
             if last_hash_temp == None:
                 break
-        # for i, transaction in enumerate(transactions):
-            #transactions[i] = Transaction.from_json(transaction)
-
-        # check coinbase transaction amount
-        # if transactions[0].amount != 100:
-        #     print("the amt in the coinbase transaction is not 100")
-        #     return False
 
         # loop through all previous blocks
         for hash in reversed(chain_uptil_last):
             prev_hash = last_header_hash
             prev_merkle_tree = blockchain.chain[prev_hash].transactions
-            # loop through transactions in prev block
-            # for i, transaction in enumerate(transactions[1:]):
             # check if transaction has appeared in previous blocks
             if prev_merkle_tree.get_proof(new_transaction) != []:
                 # transaction repeated
-                print(
-                    f"this transaction appeared before. Transaction: {new_transaction}")
                 return False
 
-        # print(transactions)
-        # for transaction in transactions[1:]:
-        #     # check if transaction was really sent by the sender
-        #     try:
-        #         transaction.validate(transaction.sig)
-        #     except AssertionError:
-        #         print("sender's signature is not valid")
-            # check if sender has enough money
-            # if self.balance[transaction.sender_vk] - transaction.amount < 0:
-            #     return False
-
         self.update_ledger(new_transaction)
-        print("Transaction has been verified: "+json.dumps(self.balance))
         return True

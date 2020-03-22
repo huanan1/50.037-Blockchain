@@ -15,7 +15,6 @@ class Transaction:
         except:
             # already in string format
             self.sender_vk = sender_vk  # public key
-        # print(type(self.sender_vk))
         try:
             self.receiver_vk = binascii.hexlify(
                 receiver_vk.to_string()).decode()
@@ -95,21 +94,3 @@ class Transaction:
         # Check if all parts of the transaction are equal
         return(self.sender_vk == other.sender_vk and self.receiver_vk == other.receiver_vk and self.amount == other.amount and self.comment == other.comment and
                self.txid == other.txid and self.time == other.time)
-
-
-if __name__ == '__main__':
-    sender_pk = SigningKey.generate()
-    sender_vk = sender_pk.get_verifying_key()
-
-    receiver_vk = SigningKey.generate().get_verifying_key()
-    # print(type(receiver_vk_vk))
-    t1 = Transaction(sender_vk, receiver_vk, 100, sender_pk=sender_pk)
-    t1_json = copy.deepcopy(t1.to_json())
-    t1_back = Transaction.from_json(t1_json)
-    assert t1_back.sender_pk is None
-
-    # print(t1_json)
-    print(t1)
-    print(t1_back)
-    print(t1 == t1_back)
-    t1.validate(t1_back.sig)
