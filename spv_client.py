@@ -1,11 +1,6 @@
-import ecdsa
 from ecdsa import SigningKey
-from transaction import Transaction
-from merkle_tree import verify_proof
 from flask import Flask, request, jsonify
-from merkle_tree import verify_proof
-from spv_blockchain import SPVBlock, SPVBlockChain
-
+import ecdsa
 import binascii
 import time
 import getopt
@@ -16,11 +11,15 @@ import requests
 import random
 import copy
 
+from transaction import Transaction
+from merkle_tree import verify_proof
+from merkle_tree import verify_proof
+from spv_blockchain import SPVBlock, SPVBlockChain
+
 app = Flask(__name__)
 
+
 # Parsing arguments when entered via CLI
-
-
 def parse_arguments(argv):
     inputfile = ''
     list_of_miner_ip = []

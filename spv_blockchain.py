@@ -1,13 +1,13 @@
-from merkle_tree import MerkleTree
 import hashlib
 import random
 import time
 import binascii
 import copy
 import requests
-from transaction import Transaction
 import pickle
-import copy
+
+from transaction import Transaction
+from merkle_tree import MerkleTree
 
 
 class SPVBlock:

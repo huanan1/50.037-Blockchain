@@ -1,10 +1,11 @@
-from blockchain import BlockChain, Block, Ledger
 import time
 import copy
-from merkle_tree import MerkleTree, verify_proof
 from ecdsa import SigningKey
 from transaction import Transaction
 import binascii
+
+from blockchain import BlockChain, Block, Ledger
+from merkle_tree import MerkleTree, verify_proof
 
 
 class Miner:

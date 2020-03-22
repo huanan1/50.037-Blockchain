@@ -1,9 +1,9 @@
 import json
-from ecdsa import SigningKey
 import binascii
 import hashlib
 import random
 import math
+from ecdsa import SigningKey
 
 
 class MerkleTree:

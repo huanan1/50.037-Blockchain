@@ -1,9 +1,9 @@
 import json
-from ecdsa import SigningKey, VerifyingKey
 import hashlib
 import binascii
 import time
 import copy
+from ecdsa import SigningKey, VerifyingKey
 
 
 class Transaction:

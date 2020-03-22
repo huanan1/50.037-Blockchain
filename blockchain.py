@@ -1,14 +1,15 @@
-from merkle_tree import MerkleTree
 import hashlib
 import random
 import time
 import binascii
 import copy
 import requests
-from transaction import Transaction
 import pickle
 import copy
 import json
+
+from merkle_tree import MerkleTree
+from transaction import Transaction
 
 
 class Block:
@@ -174,7 +175,7 @@ class BlockChain:
 
     def validate(self, block):
         if len(self.chain) > 0:
-            # Check for previous header 
+            # Check for previous header
             check_previous_header = block.previous_header_hash in self.chain or block.previous_header_hash is None
             # Check to ensure that it is less than target value
             check_target = block.header_hash() < self.TARGET
@@ -225,7 +226,7 @@ class BlockChain:
                     # Start DP function
                     temp_cleaned_keys = self.resolve_DP(
                         genesis_hash_value, 0, [genesis_hash_value])[1]
-                    # Update the longest length of blockchain 
+                    # Update the longest length of blockchain
                     if len(temp_cleaned_keys) > longest_chain_length:
                         self.cleaned_keys = copy.deepcopy(temp_cleaned_keys)
                         longest_chain_length = len(temp_cleaned_keys)
