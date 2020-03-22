@@ -5,6 +5,7 @@ import hashlib
 import random
 import math
 
+
 class MerkleTree:
 
     def __init__(self):
@@ -117,6 +118,7 @@ def verify_proof(entry, proof, root):
     if non_leaf == root:
         return True
     return False
+
 
 merkletree = MerkleTree()
 

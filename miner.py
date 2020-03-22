@@ -6,6 +6,7 @@ from ecdsa import SigningKey
 from transaction import Transaction
 import binascii
 
+
 class Miner:
     def __init__(self, blockchain, public_key=None):
         self.blockchain = copy.deepcopy(blockchain)
@@ -28,9 +29,9 @@ class Miner:
         return False
 
     def mine_from_old_block(self, merkletree, ledger, block_hash):
-        block = Block(merkletree, block_hash, merkletree.get_root(), 
-                self.current_time, self.nonce, ledger)
-        
+        block = Block(merkletree, block_hash, merkletree.get_root(),
+                      self.current_time, self.nonce, ledger)
+
         if self.blockchain.add(block):
             # If the add is successful, reset
             self.reset_new_mine()

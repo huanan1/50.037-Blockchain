@@ -10,7 +10,7 @@ list_of_ports = []
 list_of_ips = []
 list_of_wallets = []
 list_of_public_keys = []
-f = open("ports_miner.txt", "r")
+f = open("../ports_miner.txt", "r")
 for i in range(2):
     for line in f:
         single_line = line.strip().split("\t")
@@ -22,7 +22,7 @@ for i in range(2):
             list_of_public_keys.append(binascii.hexlify(ecdsa.SigningKey.from_string(
                 binascii.unhexlify(bytes(i, 'utf-8'))).get_verifying_key().to_string()).decode())
     f.close()
-    f = open("ports_spv.txt", "r")
+    f = open("../ports_spv.txt", "r")
 f.close()
 
 while True:

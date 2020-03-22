@@ -83,9 +83,9 @@ elif SELFISH:
     f = open("miner_ip.txt", "w+")
     count = 0
     for i in list_of_miner_ips:
-        count+=1
+        count += 1
         f.write(i+"\n")
-        if count >=2:
+        if count >= 2:
             break
     f.close()
 # Color args
@@ -121,13 +121,12 @@ for count, i in enumerate(list_of_miner_ports):
             break
     else:
         print("Wait, how did you reach here?")
-    # Removes file for cleanup
 
 
 for count, i in enumerate(list_of_spv_ports):
     os.system("python3 spv_client.py -p {0} -m miner_ip.txt -w {1}&".format(
         i, list_of_spv_wallets[count]))
-
+# Time delay for deployment
 time.sleep(1*(len(list_of_miner_ports) + len(list_of_spv_ports)))
-
+# Removes file for cleanup
 os.system('rm miner_ip.txt spv_ip.txt')

@@ -112,6 +112,7 @@ else:
 PUBLIC_KEY = PRIVATE_KEY.get_verifying_key()
 PUBLIC_KEY_STRING = binascii.hexlify(PUBLIC_KEY.to_string()).decode()
 
+
 def start_mining(block_queue, transaction_queue, blockchain_request_queue, blockchain_reply_queue):
     blockchain = BlockChain(LIST_OF_MINER_IP)
     miner = Miner(blockchain, PUBLIC_KEY)
@@ -212,7 +213,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                                     while send_failed:
                                         try:
                                             requests.post("http://"+miner_ip +
-                                                        "/block", data=block_data)
+                                                          "/block", data=block_data)
                                             send_failed = False
                                         except:
                                             time.sleep(0.1)
@@ -348,6 +349,7 @@ def request_full_blockchain():
         dic_chain[block_dictionary["header_hash"]] = block_dictionary
     return jsonify(dic_chain)
 
+
 @app.route('/request_blockchain')
 def request_blockchain():
     blockchain_request_queue.put(None)
@@ -370,6 +372,7 @@ def request_blockchain():
         block_dictionary["transactions"] = transaction_list
         lst_chain.append(block_dictionary)
     return jsonify(lst_chain)
+
 
 @app.route('/request_block/<header_hash>')
 def request_block(header_hash):
@@ -404,12 +407,14 @@ def request_account_balance(public_key):
     except:
         return jsonify("Cannot find account or no coins in account yet")
 
+
 @app.route('/account_balance')
 def request_my_account_balance():
     blockchain_request_queue.put(None)
     ledger = blockchain_reply_queue.get()[2]
     try:
-        reply = {"public_key": PUBLIC_KEY_STRING, "amount": ledger[PUBLIC_KEY_STRING]}
+        reply = {"public_key": PUBLIC_KEY_STRING,
+                 "amount": ledger[PUBLIC_KEY_STRING]}
         return jsonify(reply)
     except:
         return jsonify("No coins in account yet")

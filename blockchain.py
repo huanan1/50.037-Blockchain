@@ -10,6 +10,7 @@ import pickle
 import copy
 import json
 
+
 class Block:
     def __init__(self, transactions, previous_header_hash, hash_tree_root, timestamp, nonce, ledger):
         # Instantiates object from passed values
@@ -18,7 +19,7 @@ class Block:
         self.hash_tree_root = hash_tree_root  # Tree root in bytes
         self.timestamp = timestamp  # Unix time in string
         self.nonce = nonce  # Nonce in int
-        self.ledger = ledger #Ledger object
+        self.ledger = ledger  # Ledger object
 
     def header_hash(self):
         # Creates header value
@@ -34,6 +35,7 @@ class Block:
         m.update(round1)
         return m.digest()
 
+
 class BlockChain:
     # Chain is a dictionary -> {hash header (key): header metadata of blocks (value)}
     chain = dict()
@@ -45,7 +47,7 @@ class BlockChain:
     network_cached_blocks = dict()
 
     def __init__(self, miner_ips):
-            self.miner_ips = miner_ips
+        self.miner_ips = miner_ips
 
     def retrieve_ledger(self):
         # Obtain the most updated ledger from the latest block that was mined
@@ -59,7 +61,8 @@ class BlockChain:
         # Check that incoming block has prev hash and target < nonce (in case malicious miner publishing invalid blocks)
         check1 = self.validate(block)
         # Check if transactions are valid (sender has enough money, and TXIDs have not appeared in the previous blocks)
-        check2 = self.verify_transactions(copy.deepcopy(block.transactions.leaf_set), block.previous_header_hash,block.ledger)
+        check2 = self.verify_transactions(copy.deepcopy(
+            block.transactions.leaf_set), block.previous_header_hash, block.ledger)
         return check1 and check2
 
     def network_add(self, block):
@@ -86,10 +89,11 @@ class BlockChain:
             return True
         else:
             # print("\nSaved in cache: ", binascii.hexlify(block.header_hash()).decode(), self.chain)
-            self.network_cached_blocks[binascii.hexlify(block.header_hash()).decode()] = copy.deepcopy(block)
+            self.network_cached_blocks[binascii.hexlify(
+                block.header_hash()).decode()] = copy.deepcopy(block)
             return False
-    
-    def network_add_cached_blocks(self,cached_blocks):
+
+    def network_add_cached_blocks(self, cached_blocks):
         '''search through cached blocks to see if any can be added to the blockchain'''
         added = []
         runAgain = True
@@ -103,14 +107,14 @@ class BlockChain:
             for cached_header in cached_blocks:
                 next_block = cached_blocks[cached_header]
                 if self.network_block_validate(next_block):
-                    print(f"adding block: {binascii.hexlify(next_block.header_hash()).decode()} from cache to chain")
+                    print(
+                        f"adding block: {binascii.hexlify(next_block.header_hash()).decode()} from cache to chain")
                     self.chain[cached_header] = copy.deepcopy(next_block)
                     added.append(cached_header)
                     runAgain = True
                     break
-        
-        self.network_cached_blocks = copy.deepcopy(cached_blocks)
 
+        self.network_cached_blocks = copy.deepcopy(cached_blocks)
 
         if runAgain == True:
             self.network_add_cached_blocks(self.network_cached_blocks)
@@ -138,7 +142,7 @@ class BlockChain:
         if transactions[0].amount != 100:
             print("the amt in the coinbase transaction is not 100")
             return False
-        
+
         # loop through all previous blocks
         for hash in reversed(chain_uptil_prev):
             prev_hash = prev_header_hash
@@ -148,9 +152,10 @@ class BlockChain:
                 # check if transaction has appeared in previous blocks
                 if prev_merkle_tree.get_proof(transaction) != []:
                     # transaction repeated
-                    print(f"this transaction appeared before. Transaction: {transaction}")
+                    print(
+                        f"this transaction appeared before. Transaction: {transaction}")
                     return False
-        
+
         for transaction in transactions[1:0]:
             # check if transaction was really sent by the sender
             try:
@@ -188,7 +193,8 @@ class BlockChain:
         Checks cleared_transaction if transaction is already duped in longest chain
         if it is don't send
         '''
-        transactions = copy.deepcopy(block.transactions.leaf_set)[1:] # ignore coinbase transaction
+        transactions = copy.deepcopy(block.transactions.leaf_set)[
+            1:]  # ignore coinbase transaction
 
         not_sent = True
         for miner_ip in self.miner_ips:
@@ -197,7 +203,7 @@ class BlockChain:
                     while not_sent:
                         try:
                             requests.post("http://"+miner_ip +
-                                        "/transaction", data=transaction)
+                                          "/transaction", data=transaction)
                             not_sent = False
                         except:
                             time.sleep(0.1)
@@ -237,8 +243,8 @@ class BlockChain:
                 rebroadcasted = False
                 while not rebroadcasted:
                     # retry rebroadcasting until it succeeds
-                    rebroadcasted = self.rebroadcast_transactions(block, cleared_transactions)
-                
+                    rebroadcasted = self.rebroadcast_transactions(
+                        block, cleared_transactions)
 
     def resolve_DP(self, hash_check, score, cleared_hashes):
         # Assuming this is the last block in the chain, it first saves itself to the list
@@ -267,20 +273,21 @@ class BlockChain:
             return self.chain[self.last_hash]
         else:
             return None
-            
+
     def __str__(self):
         reply = "-----------------\nThere are {} blocks in the blockchain\n\n".format(
             len(self.chain))
         for count, i in enumerate(self.chain):
             reply += "Header: {}\tPrev_header: {}\n".format(
                 str(i), str(self.chain[i].previous_header_hash))
-        reply+="\n~~~\n"
+        reply += "\n~~~\n"
         reply += "The longest chain is {} blocks\n".format(
             len(self.cleaned_keys))
         for count, i in enumerate(self.cleaned_keys):
             reply += i[:10] + " -> "
         reply = reply[:-4]
         return reply
+
 
 class Ledger:
 
@@ -292,15 +299,14 @@ class Ledger:
             transaction = Transaction.from_json(transaction)
         except:
             pass
-        #add recipient to ledger if he doesn't exist
+        # add recipient to ledger if he doesn't exist
         if transaction.receiver_vk not in self.balance:
             self.balance[transaction.receiver_vk] = transaction.amount
         else:
             self.balance[transaction.receiver_vk] += transaction.amount
 
-        #don't have to check whether sender exists because it is done under verify_transaction
+        # don't have to check whether sender exists because it is done under verify_transaction
         self.balance[transaction.sender_vk] -= transaction.amount
-      
 
     def coinbase_transaction(self, public_key):
         if public_key not in self.balance:
@@ -313,10 +319,10 @@ class Ledger:
             return self.balance[public_key]
         except:
             return 0
-    
-    #new_transaction, validated_transaction from create_merkel
-    #transactions: validated transactions in existing blocks
-    #def verify_transaction(self, new_transaction, validated_transactions, transactions, prev_header_hash, blockchain):
+
+    # new_transaction, validated_transaction from create_merkel
+    # transactions: validated transactions in existing blocks
+    # def verify_transaction(self, new_transaction, validated_transactions, transactions, prev_header_hash, blockchain):
     def verify_transaction(self, new_transaction, validated_transactions, last_header_hash, blockchain):
 
         # transactions = copy.deepcopy(transactions)
@@ -326,25 +332,27 @@ class Ledger:
                 validated_transactions[i] = Transaction.from_json(transaction)
             except:
                 validated_transactions[i] = transaction
-        
-        #check whether sender is in ledger
+
+        # check whether sender is in ledger
         if new_transaction.sender_vk not in self.balance:
             return False
 
-        #check whether there is sufficient balance in sender's account
+        # check whether there is sufficient balance in sender's account
         if new_transaction.amount > self.get_balance(new_transaction.sender_vk):
-            print(f"There is insufficient balance for transaction in account {new_transaction.sender_vk}")
+            print(
+                f"There is insufficient balance for transaction in account {new_transaction.sender_vk}")
             return False
-        
-        #check signature
+
+        # check signature
         new_transaction.validate(new_transaction.sig)
-        
-        #check whether txid exists in validated transactions
+
+        # check whether txid exists in validated transactions
         for transaction in validated_transactions:
             if new_transaction.txid == transaction.txid:
-                print(f"this transaction appeared before. Transaction: {transaction}")
+                print(
+                    f"this transaction appeared before. Transaction: {transaction}")
                 return False
-              
+
         # obtain blocks in blockchain uptil block with previous header hash
         last_hash_temp = last_header_hash
         chain_uptil_last = [last_header_hash]
@@ -357,26 +365,27 @@ class Ledger:
                 return False
             if last_hash_temp == None:
                 break
-        #for i, transaction in enumerate(transactions):
+        # for i, transaction in enumerate(transactions):
             #transactions[i] = Transaction.from_json(transaction)
 
         # check coinbase transaction amount
         # if transactions[0].amount != 100:
         #     print("the amt in the coinbase transaction is not 100")
         #     return False
-        
+
         # loop through all previous blocks
         for hash in reversed(chain_uptil_last):
             prev_hash = last_header_hash
             prev_merkle_tree = blockchain.chain[prev_hash].transactions
             # loop through transactions in prev block
             # for i, transaction in enumerate(transactions[1:]):
-                # check if transaction has appeared in previous blocks
+            # check if transaction has appeared in previous blocks
             if prev_merkle_tree.get_proof(new_transaction) != []:
                 # transaction repeated
-                print(f"this transaction appeared before. Transaction: {new_transaction}")
+                print(
+                    f"this transaction appeared before. Transaction: {new_transaction}")
                 return False
-        
+
         # print(transactions)
         # for transaction in transactions[1:]:
         #     # check if transaction was really sent by the sender
@@ -387,7 +396,7 @@ class Ledger:
             # check if sender has enough money
             # if self.balance[transaction.sender_vk] - transaction.amount < 0:
             #     return False
-        
+
         self.update_ledger(new_transaction)
         print("Transaction has been verified: "+json.dumps(self.balance))
         return True
