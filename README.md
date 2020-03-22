@@ -54,20 +54,13 @@ Sample startup:
 - `miner_manage.py -p 1500 -m miner_ip.txt -c g -s spv_ip.txt -d 2 -w b0cfe80dbda0d882b6d517321b3eb3343c48864ad097c5df`
 - `miner_manage.py -p 1200 -m miner_ip.txt -c r -f 1`
 
-`miner_manage.py -p 2200`
-
-`miner_manage.py -p 1500 -m miner_ip.txt -c g -s spv_ip.txt -d 2 -w 
-b0cfe80dbda0d882b6d517321b3eb3343c48864ad097c5df`
-
-`miner_manage.py -p 1200 -m miner_ip.txt -c r -f 1`
-
 ### SPVClient
 `spv_client.py`
 | Argument          | Description                                                | Example      | Additional Notes                                                                         |
 | ----------------- | ---------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------- |
 | -p, --port        | Port number of SPV to run on                             | 25200        | **(Mandatory)**                                                                          |
 | -m, --iminerfile  | Directory of list of other miner IPs (10.0.2.5:2134)       | miner_ip.txt | **(Mandatory)**                                                                           |
-| -w, --wallet      | Sets the wallet's private key, if empty, generates new key | b0cfe80...   | **(Optional)**                                                                           |
+| -w, --wallet      | Sets the wallet's private key. If empty, generates new key | b0cfe80...   | **(Optional)**                                                                           |
 
 Sample startup:
 - `spv_client.py -p 2300 -m miner_ip.txt`
