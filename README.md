@@ -1,5 +1,5 @@
 # Group: GOLD EXPERIENCE
-## Blockchain Technology Proejct - SUTDcoin
+## Blockchain Technology Project - SUTDcoin
 ## Setting up the environment
 ```
 python3 -m venv venv
