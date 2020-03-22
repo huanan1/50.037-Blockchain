@@ -39,7 +39,7 @@ class Block:
 class BlockChain:
     # Chain is a dictionary -> {hash header (key): header metadata of blocks (value)}
     chain = dict()
-    TARGET = b"\x00\x00\x0f\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+    TARGET = b"\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
     last_hash = None
     # cleaned_keys is an ordered list of all the header hashes, only updated on BlockChain.resolve() call
     cleaned_keys = []
