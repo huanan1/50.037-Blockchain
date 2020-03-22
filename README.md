@@ -238,14 +238,14 @@ Implemented features:
 ### Double-spending attack
 1. At a specified block in the code, the attacker will send a transaction.
 2. Right after the transaction in (1) is sent, the attacker empties his account by creating a new address and transferring the money to the new account. Subsequent mining will also be carried out under the new address.
-3. When at least one block has been mined since the transansaction in (1), the attacker will start to mine blocks with the previous header hash being the block before the one with the transaction we would like to void. The attacker publishes the blocks after three blocks has been mined. If the attack is not successful, the attacker continues mining blocks for his intended fork and publishes them again after 3 blocks. Since attacker has majority hashing power, attacker will eventually overwrite block with bad transaction in (1).
+3. When at least one block has been mined since the transaction in (1), the attacker will start to mine blocks with the previous header hash being the block before the one with the transaction we would like to void. The attacker publishes the blocks after three blocks has been mined. If the attack is not successful, the attacker continues mining blocks for his intended fork and publishes them again after 3 blocks. Since attacker has majority hashing power, attacker will eventually overwrite block with bad transaction in (1).
 
 #### Example output
 <img width="473" alt="double_spending" src="https://user-images.githubusercontent.com/28921108/77196109-b1d56f80-6b1d-11ea-9db2-3d2aad71288b.PNG">
 
 - Block following `000005d864` was originally `000005b93b` but is `0000061ea` after attack.
 
-### Selish-mining
+### Selfish-mining
 | Selfish miner | Honest miner |
 | ------------- | ------------ |
 | 0 coins       | 0 coins      |
