@@ -1,20 +1,21 @@
-from ecdsa import SigningKey
-from flask import Flask, request, jsonify
-import ecdsa
-import binascii
-import time
-import getopt
 import sys
-import pickle
-import json
-import requests
-import random
 import copy
+import time
+import json
+import ecdsa
+import getopt
+import pickle
+import random
+import requests
+import binascii
 
+from ecdsa import SigningKey
 from transaction import Transaction
 from merkle_tree import verify_proof
 from merkle_tree import verify_proof
+from flask import Flask, request, jsonify
 from spv_blockchain import SPVBlock, SPVBlockChain
+
 
 app = Flask(__name__)
 
@@ -69,8 +70,7 @@ class SPVClient:
     '''
     Each SPVClient acts as a wallet, and should have a private and public key.
     The SPVClient should be able to store all the headers of the blockchain. 
-    The SPVClient should also be able to send transactions.
-    The SPVClient receive transactions and verify them
+    The SPVClient should also be able to send transactions, receive and verify them.
     '''
 
     def __init__(self, private_key, public_key, public_key_string, spv_blockchain):
@@ -134,7 +134,7 @@ def request_block(header_hash):
     try:
         block = chain[header_hash]
     except:
-        return jsonify("Unable to find block")
+        return jsonify("Unable to find block.")
     block_dictionary = dict()
     block_dictionary["header_hash"] = header_hash
     block_dictionary["previous_header_hash"] = block.previous_header_hash
@@ -153,7 +153,7 @@ def request_my_account_balance():
             "http://" + miner_ip + "/account_balance/" + PUBLIC_KEY_STRING).text)
         return jsonify(response)
     except:
-        return jsonify("No coins in account yet")
+        return jsonify("No coins in account yet.")
 
 
 @app.route('/account_balance/<public_key>')
@@ -164,7 +164,8 @@ def request_account_balance(public_key):
             "http://" + miner_ip + "/account_balance/" + public_key).text)
         return jsonify(response)
     except:
-        return jsonify("Cannot find account")
+        return jsonify("Cannot find account.")
+
 
 # To broadcast to all miners when transaction is created
 @app.route('/send_transaction', methods=['POST'])
@@ -177,7 +178,7 @@ def createTransaction():
             "http://" + miner_ip + "/account_balance/" + spv_client.PUBLIC_KEY_STRING).text)
         balance = response["amount"]
     except:
-        return jsonify("Cannot find account or no coins in account yet")
+        return jsonify("Cannot find account or no coins in account yet.")
     if balance >= int(amount):
         new_transaction = Transaction(
             spv_client.PUBLIC_KEY, receiver_public_key, int(amount), sender_pk=spv_client.PRIVATE_KEY)
@@ -186,7 +187,7 @@ def createTransaction():
 
     for miner in LIST_OF_MINER_IP:
         not_sent = True
-        # execute post request to broadcast transaction
+        # Execute POST request to broadcast transaction
         while not_sent:
             try:
                 requests.post(
@@ -206,7 +207,7 @@ def verify_Transaction(txid):
         response = json.loads(requests.post(
             "http://" + miner_ip + "/verify_transaction_from_spv", data=txid).text)
     except:
-        return jsonify("TXID not found")
+        return jsonify("TXID not found.")
     entry = response["entry"]
     proof_string = response["proof"]
     proof_bytes = []
@@ -232,7 +233,7 @@ def verify_Transaction(txid):
                 ), "verify": True, "confirmations": (len(spv_client.spv_blockchain.cleaned_keys) - count), "block_header": i}
                 return jsonify(reply)
         return jsonify("No block headers found.")
-    return jsonify("TXID not found")
+    return jsonify("TXID not found.")
 
 
 @app.route('/block_header', methods=['POST'])

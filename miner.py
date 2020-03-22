@@ -1,14 +1,15 @@
 import time
 import copy
-from ecdsa import SigningKey
-from transaction import Transaction
 import binascii
 
+from ecdsa import SigningKey
+from transaction import Transaction
 from blockchain import BlockChain, Block, Ledger
 from merkle_tree import MerkleTree, verify_proof
 
 
 class Miner:
+
     def __init__(self, blockchain, public_key=None):
         self.blockchain = copy.deepcopy(blockchain)
         self.nonce = 0
@@ -44,11 +45,10 @@ class Miner:
         self.nonce = 0
         self.current_time = str(time.time())
         self.blockchain.resolve()
-        # resets after every block is added, both network and locally
+        # Resets after every block is added, both network and locally
 
     # Called when a new block is received by another miner
     def network_block(self, block):
-        # Checks if the n
         if self.blockchain.network_add(block):
             self.reset_new_mine()
             return True
@@ -68,12 +68,12 @@ class Miner:
                 transaction_queue.get())
         for transaction in list_of_raw_transactions:
             if tx_to_ignore is not None and transaction in tx_to_ignore:
-                print(f"ignoring transaction: {transaction}")
+                print(f"Ignoring transaction: {transaction}")
             elif ledger.verify_transaction(transaction, list_of_validated_transactions, binascii.hexlify(block.header_hash()).decode(), self.blockchain):
                 list_of_validated_transactions.append(transaction)
-                print("verification complete")
+                print("Verification complete.")
         merkletree = MerkleTree()
-        # CHECK SENDER
+        # Check sender
         coinbase_sender_pk = SigningKey.generate()
         coinbase_sender_vk = coinbase_sender_pk.get_verifying_key()
         merkletree.add(Transaction(coinbase_sender_vk, self.public_key,

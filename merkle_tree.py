@@ -1,8 +1,9 @@
 import json
-import binascii
-import hashlib
-import random
 import math
+import random
+import hashlib
+import binascii
+
 from ecdsa import SigningKey
 
 
@@ -21,7 +22,7 @@ class MerkleTree:
     def build(self):
         # tree is the full collection of all non-leaves, i.e. this not contain any plaintext items
         self.tree = []
-        # transfer of leaf_unset to leaf_set, this is to ensure to mixing up just incase more leaves are added after MerkleTree.build()
+        # Transfer of leaf_unset to leaf_set, this is to ensure no mixing up just in case more leaves are added after MerkleTree.build()
         self.leaf_set = self.leaf_unset
         number_of_leaf = len(self.leaf_set)
         # rounds is the number of rounds minus the first layer of hashing of plaintext value
@@ -34,34 +35,34 @@ class MerkleTree:
             hash_leaf.append(m.digest())
         # Appending said first hashed layer
         self.tree.append(hash_leaf)
-        # loop for number of rounds
+        # Loop for number of rounds
         for i in range(rounds):
             non_leaf = []
             # Loops through all the nodes in the current lowest layer of tree, jumping every 2 nodes, moving left to right
             for j in range(0, len(self.tree[i]), 2):
-                # try and find a 'partner node', ie a 'right' node
+                # Try and find a 'partner node', ie a 'right' node
                 try:
                     new_node = self.tree[i][j] + self.tree[i][j+1]
                 except:
-                    # If it fails, the node gets promoted to the next layer and re-hashed alone
+                    # If it fails, the node gets promoted to the next layer and is re-hashed alone
                     new_node = self.tree[i][j]
                 m = hashlib.sha256()
                 m.update(new_node)
                 non_leaf.append(m.digest())
-            # append to tree a full layer
+            # Append to tree a full layer
             self.tree.append(non_leaf)
 
     def get_proof(self, check):
-        # check through the leaf_set for the 'check'
+        # Check through the leaf_set for the 'check'
         for count, i in enumerate(self.leaf_set):
-            # elements is what is returned
+            # Elements list contains what is returned
             elements = []
-            # if it matches
+            # If it matches
             if i == str(check).encode():
-                # make both partner and current equal to the 'starting position'
+                # Make both partner and current equal to the 'starting position'
                 partner_node = count
                 current_node = partner_node
-                # loop through all layers
+                # Loop through all layers
                 for j in range(len(self.tree)):
                     # If the current node is the left of the pair...
                     if current_node % 2 == 0:
@@ -76,16 +77,15 @@ class MerkleTree:
                         # partner_position is 0, if on the left
                         partner_position = 0
                     try:
-                        # appends to elements a tuple e.g., (0, hash_value)
+                        # Appends to elements a tuple e.g., (0, hash_value)
                         elements.append(
                             (partner_position, self.tree[j][partner_node]))
                     except:
-                        # append None if there is no partner_node
+                        # Append None if there is no partner_node
                         elements.append(None)
                     # Finds the position of the node in the next level before continuing loop
                     current_node = current_node//2
                     partner_node = current_node
-            # It loops one too many times, I lazy fix
             elements = elements[:-1]
             # If elements is not empty, it means it found the value, so disrupt loop and return list
             if len(elements) > 0:
@@ -98,13 +98,13 @@ class MerkleTree:
 
 
 def verify_proof(entry, proof, root):
-    # hash the entry first
+    # Hash the entry first
     m = hashlib.sha256()
     m.update(str(entry).encode())
     non_leaf = m.digest()
-    # run it through the proof and hash/match each one
+    # Run it through the proof and hash/match each one
     for i in proof:
-        # check if i is not None, None means layer promotion without partner
+        # Check if i is not None, None means layer promotion without partner
         if i is not None:
             if i[0] == 1:
                 # i is on the right

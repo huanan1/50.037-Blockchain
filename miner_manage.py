@@ -1,23 +1,23 @@
-import logging
-import random
+import sys
 import time
 import copy
+import json
+import ecdsa
+import random
 import pickle
-import requests
-import sys
 import getopt
+import logging
+import requests
 import colorama
 import binascii
-import ecdsa
-import json
+
+from miner import Miner
 from ecdsa import SigningKey
+from transaction import Transaction
+from spv_blockchain import SPVBlock
 from flask import Flask, request, jsonify
 from multiprocessing import Process, Queue
-from spv_blockchain import SPVBlock
-from miner import Miner
-
 from blockchain import BlockChain, Block, Ledger
-from transaction import Transaction
 from merkle_tree import MerkleTree, verify_proof
 
 
@@ -121,7 +121,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
     selfish_flush = False
     # Infinite loop
     while True:
-        # create a merkel tree from transaction queue
+        # Create a merkel tree from transaction queue
         merkletree, ledger = miner.create_merkle(transaction_queue)
 
         while True:
@@ -136,7 +136,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                     sending_block.header_hash()).decode()
 
                 # Grab the last block and send to network
-                # regular miner
+                # If regular miner
                 if not SELFISH:
                     data = pickle.dumps(sending_block, protocol=2)
                     for miner_ip in LIST_OF_MINER_IP:
@@ -147,7 +147,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                                               "/block", data=data)
                                 send_failed = False
                             except:
-                                print("Send failed", miner_ip)
+                                print("Send failed.", miner_ip)
                                 time.sleep(0.2)
                     sending_spv_block = SPVBlock(sending_block)
                     data = pickle.dumps(sending_spv_block, protocol=2)
@@ -159,7 +159,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                                               "/block_header", data=data)
                                 send_failed = False
                             except:
-                                print("Send failed", spv_ip)
+                                print("Send failed.", spv_ip)
                                 time.sleep(0.2)
                 # If selfish miner
                 elif SELFISH:
@@ -217,14 +217,14 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                     mine_or_recv += "\n"
                     break
                 if not blockchain_request_queue.empty():
-                    print("Received request of blockchain")
+                    print("Received request of blockchain.")
                     blockchain_request_queue.get()
                     print(blockchain.last_block())
                     print(blockchain.retrieve_ledger())
 
                     blockchain_reply_queue.put((copy.deepcopy(blockchain.cleaned_keys), copy.deepcopy(blockchain.chain),
                                                 copy.deepcopy(blockchain.retrieve_ledger())))
-        # Section run if the miner found a block or receives a block that has been broadcasted
+        # Section runs if the miner found a block or receives a block that has been broadcasted
         print(COLOR + "Public key: {}\n".format(PUBLIC_KEY_STRING) + "PORT: {}\n".format(MY_PORT) + mine_or_recv + "\n" +
               (str(miner.blockchain) if MODE == 1 else str(miner.blockchain).split("~~~\n")[1]))
 
@@ -350,7 +350,7 @@ def request_send_transaction():
 
     for miner in LIST_OF_MINER_IP:
         not_sent = True
-        # execute post request to broadcast transaction
+        # Execute POST request to broadcast transaction
         while not_sent:
             try:
                 requests.post(

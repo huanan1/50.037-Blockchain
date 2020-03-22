@@ -1,23 +1,23 @@
-import random
+import sys
 import time
 import copy
+import random
 import pickle
 import requests
-import sys
 import argparse
 import colorama
 import binascii
+
+from miner import Miner
 from ecdsa import SigningKey
+from merkle_tree import MerkleTree
+from transaction import Transaction
+from blockchain import BlockChain, Block
 from flask import Flask, request, jsonify
 from multiprocessing import Process, Queue
 
-from blockchain import BlockChain, Block
-from transaction import Transaction
-from merkle_tree import MerkleTree
-from miner import Miner
-
 '''
-Attacker carries out double-spend attack by creating a new fork before the block with a transaction he wants to void
+Attacker carries out double-spend attack by creating a new fork before the block with a transaction he wants to void.
 Since attacker has >=51% hashing power, he will eventually have the longer chain which he publishes, causing blocks
 on the other fork to be void.
 
@@ -88,7 +88,7 @@ def find_private_block(chain, prev_hash, original_blocks):
 
 
 def check_block_in_chain(blockchain, block_header_hash):
-    # cleaned_keys doesn't have the most updated chain if resolve not called here
+    # cleaned_keys will not have the most updated chain if resolve not called here
     blockchain.resolve()
     if block_header_hash in blockchain.cleaned_keys:
         return True
@@ -98,8 +98,9 @@ def check_block_in_chain(blockchain, block_header_hash):
 def start_mining(block_queue, transaction_queue, public_key, private_key):
     blockchain = BlockChain([args.ip_other])
     miner = Miner(blockchain, public_key)
-    miner_status = False  # whether miner is ready to send
-    # variables for double-spending attack 
+    miner_status = False  # Checks if miner is ready to send
+
+    # Variables for double-spending attack:
     start_attack = False
     announced_attack = False
     cease_attacks = False
@@ -117,10 +118,10 @@ def start_mining(block_queue, transaction_queue, public_key, private_key):
     while True:
         blockchain.resolve()
         if args.attacker and start_attack:
-            # make sure new blocks don't include the bad_tx from attacker
+            # Make sure new blocks don't include the bad_tx from attacker
             merkletree, ledger = miner.create_merkle(
                 transaction_queue, tx_to_ignore=ignore_transactions)
-        else:  # not attacker or attacker and not attacking
+        else:  # Not attacker or is an attacker and not attacking
             merkletree, ledger = miner.create_merkle(transaction_queue)
 
         if not cease_attacks:
@@ -131,70 +132,69 @@ def start_mining(block_queue, transaction_queue, public_key, private_key):
             else:
                 start_attack = len(blockchain.cleaned_keys) > trigger_block
 
-            # send a bad transaction after trigger_block number of blocks in chain
+            # Send a bad transaction after trigger_block number of blocks in chain
             unsent_bad_tx = len(blockchain.cleaned_keys) == trigger_block
 
-            # this if statement should only be True once
-            # send transaction with intent to double spend
+            # This if statement should only be True once
+            # Send transaction with intent to double spend
             if args.attacker and unsent_bad_tx:
                 bad_tx = Transaction(public_key, SigningKey.generate().get_verifying_key(), 50,
                                      "give me the goods", sender_pk=private_key).to_json().encode()
-                print("sending transaction with intent to double-spend...")
-                # broadcast_transaction(bad_tx) # not necessary for demo
-                print("sent transaction")
+                print("Sending transaction with intent to double-spend...")
+                print("Transaction sent.")
                 ignore_transactions.append(bad_tx)
                 unsent_bad_tx = False
                 sent_tx = True
 
         while True:
             miner_status = False
-            # this if statement should only be True once
-            # start of attack
+            # This if statement should only be True once
+            # Start of attack
             if not announced_attack and args.attacker and start_attack:
-                # take the hash of the block before the bad_tx
+                # Take the hash of the block before the bad_tx
                 trigger_block_hash = blockchain.cleaned_keys[trigger_block-1]
                 private_last_hash = trigger_block_hash
 
-                # used to track which blocks to ignore in trying to build new longest chain
+                # Used to track which blocks to ignore in trying to build new longest chain
                 original_blocks = copy.deepcopy(
                     blockchain.cleaned_keys[trigger_block:])
                 print("=============\nSTART ATTACK!\n============")
                 announced_attack = True
 
-                # generate new public key and empty out balance from old public key
+                # Generate new public key and empty out balance from old public key
                 new_private_key = create_key()
                 new_public_key = new_private_key.get_verifying_key()
                 try:
                     print(
-                        "double-spending: making transaction to empty out old account...")
+                        "Double-spending: Making transaction to empty out old account...")
                     empty_old_account = Transaction(public_key, new_public_key, amount=ledger.get_balance(
                         public_key), comment="transferring all money out", sender_pk=private_key)
                     print("sent transaction")
                 except AssertionError:
-                    # old account already empty
+                    # Old account already empty
                     pass
                 public_key = new_public_key
                 private_key = new_private_key
 
-                # take on a new identity
+                # Take on a new identity
                 miner = Miner(blockchain, new_public_key)
-                # need to create merkle again so coinbase goes to new_public_key
+                # Need to create merkle again so coinbase goes to new_public_key
                 merkletree, ledger = miner.create_merkle(
                     transaction_queue, tx_to_ignore=ignore_transactions)
 
-            # if attack starts, slow down honest miner
+            # If attack starts, slow down honest miner
             if not args.attacker and start_attack:
                 if skip_mine_count % 500 == 0:
                     miner_status = miner.mine(merkletree, ledger)
-                    # keep range of skip_mine_count within (0,500]
+                    # Keep range of skip_mine_count within (0,500]
                     skip_mine_count = 0
                 skip_mine_count += 1
             elif args.attacker and start_attack:
-                # start mining from block before bad_tx
+                # Start mining from block before bad_tx
                 miner_status = miner.mine_from_old_block(
                     merkletree, ledger, private_last_hash)
             else:
-                # mine normally if no attack
+                # Mine normally if no attack
                 miner_status = miner.mine(merkletree, ledger)
 
             mine_or_recv = ""
@@ -210,7 +210,7 @@ def start_mining(block_queue, transaction_queue, public_key, private_key):
                         sending_block.header_hash()).decode()
                     mine_or_recv += sending_block_header_hash
                     private_fork.append(sending_block)
-                    # update private_last_hash
+                    # Update private_last_hash
                     private_last_hash = sending_block_header_hash
                     if len(private_fork) == 3:
                         for block in private_fork:
@@ -231,9 +231,9 @@ def start_mining(block_queue, transaction_queue, public_key, private_key):
                             cease_attacks = True
                         else:
                             print(
-                                "block to void:", original_blocks[0], "chain:", blockchain.cleaned_keys)
+                                "Block to void:", original_blocks[0], "Chain:", blockchain.cleaned_keys)
                             print(
-                                "block we want to void is still in chain! continuing attack...")
+                                "Block we want to void is still in chain! Continuing attack...")
 
                 else:  # args.attacker and not start_attack or not args.attacker
                     sending_block = blockchain.last_block()
@@ -286,7 +286,7 @@ def new_transaction_network():
 
 
 if __name__ == '__main__':
-    args = parse_arguments()  # access arguments via args.argument
+    args = parse_arguments()  # Access arguments via args.argument
     private_key = create_key() if args.private_key is None else args.private_key
     public_key = private_key.get_verifying_key()
 

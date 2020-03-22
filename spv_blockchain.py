@@ -1,16 +1,17 @@
-import hashlib
-import random
-import time
-import binascii
 import copy
-import requests
+import time
+import random
 import pickle
+import hashlib
+import binascii
+import requests
 
-from transaction import Transaction
 from merkle_tree import MerkleTree
+from transaction import Transaction
 
 
 class SPVBlock:
+
     def __init__(self, block):
         # Same as Block class except without transactions and stores block header hashes
         self.previous_header_hash = block.previous_header_hash  # Previous hash in string
