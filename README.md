@@ -184,6 +184,21 @@ Called by other Miners and SPV, able to receive Transactions as json in body
 
 Called by Miners, able to receive SPVBlock objects as Pickles from other Miners in body
 
+## Utility
+The `utility/` folder includes three files
+
+### generate_private_key.py
+Generates a private/public key pair
+```
+Private key: 73389712abd6df649d92e4cf5a49c63582cbfdcee9f38932
+Public key: e86f5e99bfe8095defd9f6d801456f2e38e1f5719e6c060dbf2d1b5d7191a002826c5963de797686bdf45a9cbbb25fe2
+```
+
+### random_transactions.py
+Generates random transactions at random intervals based on the wallet and port information in `ports_miner.txt` and `ports_spv.txt`
+
+### selfish_miner_checker.py
+Sends periodic checks for account balances for the first two entries in `ports_miner.txt`, meant to be use in the **Selfish demo only**
 
 ## Documentation of displayed features
 ###	Simulate miners running Nakamoto consensus and making transactions
@@ -252,7 +267,9 @@ Implemented features:
 | 4700 coins    | 1700 coins   |
 | 5200 coins    | 2000 coins   |
 | 5500 coins    | 2000 coins   |
-- Description of what a selfish miner does and how it manages to win despite not necesarily having majority hashing power.
+- The Selfish miner holds **n** number of blocks after mining before releasing it to the network
+- The Selfish miner will try to mine at least one block faster than the rest of the network before releasing it to the network, this is to force the rest of the miners to switch to its fork
+- In the demo, the Selfish miner will reset its collection when it realises that the other miners have already **n + 1** blocks, and is unable to catch up
 
 
 ## Major differences between Bitcoin and SUTDcoin
