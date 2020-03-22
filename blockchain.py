@@ -130,10 +130,6 @@ class BlockChain:
             if prev_hash_temp == None:
                 chain_uptil_prev.append(prev_hash_temp)
             break
-        # try:
-        #     chain_uptil_prev = self.cleaned_keys[:self.cleaned_keys.index(prev_header_hash)+1]
-        # except:
-        #     return False
 
         # convert transactions to Transaction objects
         for i, transaction in enumerate(transactions):
@@ -193,7 +189,7 @@ class BlockChain:
         Checks cleared_transaction if transaction is already duped in longest chain
         if it is don't send
         '''
-        transactions = copy.deepcopy(block.transactions.leaf_set)
+        transactions = copy.deepcopy(block.transactions.leaf_set)[1:] # ignore coinbase transaction
 
         not_sent = True
         for miner_ip in self.miner_ips:
