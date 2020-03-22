@@ -28,7 +28,8 @@ Both `ports_miner.txt` and `ports_spv.txt` have identical formats.
 
 The format in the current repo is as follows:
 `<port_number>\t<private_key>\t<public_key>\n`
-**Note:** Ensure 'tab character' is in between each field, as some IDEs might do 4 spaces
+
+**Note:** Ensure 'tab character' is in between each field, as some IDEs might do 4 spaces.
 
 - `<port_number>` field is mandatory, and the code will run as many instances as there are ports in the file
 - `<private_key>` field is not mandatory, as the `miner_manage.py` and `spv_client.py` files will generate their own private keys when no input is detected
@@ -58,7 +59,7 @@ b0cfe80dbda0d882b6d517321b3eb3343c48864ad097c5df`
 
 `miner_manage.py -p 1200 -m miner_ip.txt -c r -f 1`
 
-### Miner
+### SPVClient
 `spv_client.py`
 | Argument          | Description                                                | Example      | Additional Notes                                                                         |
 | ----------------- | ---------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------- |
@@ -86,28 +87,30 @@ Implemented features:
   - see `network_block` method in `blockchain.py`
 - forks resolved
   - Example:
-  - ![fork](https://user-images.githubusercontent.com/28921108/77232316-36d28e80-6bdb-11ea-83a9-4d76e346a78e.png)
-  red miner originally had the block `0000ae565b` after `000044cc2f` while white miner had the block `00006e7b8c`. The fork is only resolved when one chain becomes longer. The miner(s) with the shorter chain will stop mining on that chain and work on the longer one instead.
-  - ![fork_resolved](https://user-images.githubusercontent.com/28921108/77232319-3934e880-6bdb-11ea-83b1-35d231c8def1.png)
-  in this case, the red miner stopped working on a chain with his original block (`0000ae56fb`) and adopts the longer chain which builts on white's mined block (`00006e7b8c`)
+  ![fork](https://user-images.githubusercontent.com/28921108/77232316-36d28e80-6bdb-11ea-83a9-4d76e346a78e.png)
+  - Red miner originally had the block `0000ae565b` after `000044cc2f` while white miner had the block `00006e7b8c`. The fork is only resolved when one chain becomes longer. The miner(s) with the shorter chain will stop mining on that chain and work on the longer one instead.
+  ![fork_resolved](https://user-images.githubusercontent.com/28921108/77232319-3934e880-6bdb-11ea-83b1-35d231c8def1.png)
+  - In this case, the red miner stopped working on a chain with his original block (`0000ae56fb`) and adopts the longer chain which builts on white's mined block (`00006e7b8c`).
 
 ### Interaction of SPV clients with miners
 Implemented features:
+- acts as a wallet, and has both a public and private key
 - associated key pairs
 - receive block headers
-- receive transactions and verify them
+  - block headers are obtained from a separate blockchain. See `spv_blockchain.py`
+- receive and verify transactions
 - send transactions
 
 
 ### Double-spending attack
 1. At a specified block in the code, the attacker will send a transaction.
-2. Right after the transaction in 1. is sent, the attacker empties his account by creating a new address and transferring the money to the new account. Subsequent mining will also be carried out under the new address.
-3. When at least one block has been mined since the transansaction in 1, the attacker will start to mine blocks with the prev header hash being the block before the one with the transaction we would like to void. The attacker publishes the blocks after three blocks has been mined. If the attack is not successful, the attacker continues mining blocks for his intended fork and publishes them again after 3 blocks. Since attacker has majority hashing power, attacker will eventually overwrite block with bad transaction in 1.
+2. Right after the transaction in (1) is sent, the attacker empties his account by creating a new address and transferring the money to the new account. Subsequent mining will also be carried out under the new address.
+3. When at least one block has been mined since the transansaction in (1), the attacker will start to mine blocks with the previous header hash being the block before the one with the transaction we would like to void. The attacker publishes the blocks after three blocks has been mined. If the attack is not successful, the attacker continues mining blocks for his intended fork and publishes them again after 3 blocks. Since attacker has majority hashing power, attacker will eventually overwrite block with bad transaction in (1).
 
 #### Example output
 <img width="473" alt="double_spending" src="https://user-images.githubusercontent.com/28921108/77196109-b1d56f80-6b1d-11ea-9db2-3d2aad71288b.PNG">
 
-- Block following `000005d864` was originally `000005b93b` but is `0000061ea` after attack
+- Block following `000005d864` was originally `000005b93b` but is `0000061ea` after attack.
 
 ### Selish-mining
 | Selfish miner | Honest miner |
@@ -131,12 +134,13 @@ Implemented features:
 | 4700 coins    | 1700 coins   |
 | 5200 coins    | 2000 coins   |
 | 5500 coins    | 2000 coins   |
-- __DESCRIPTION of what a selfish miner does, how it manages to win despite not necesarily having majority hashing power__
+- Description of what a selfish miner does and how it manages to win despite not necesarily having majority hashing power.
 
 
 ## Major differences between Bitcoin and SUTDcoin
-| Property          | Bitcoin                        | SUTDcoin        |
-| ----------------- | ------------------------------ | --------------- |
-| Name              | Bitcoin                        | SUTDcoin        |
-| Difficulty        | Dynamic, adjusts every 2 weeks | Static          |
-| Transaction model | UTXO                           | Address:Balance |
+| Property          | Bitcoin                                                               | SUTDcoin        |
+| ----------------- | --------------------------------------------------------------------- | --------------- |
+| Name              | Bitcoin                                                               | SUTDcoin        |
+| Difficulty        | Dynamic, adjusts every 2 weeks                                        | Static          |
+| Transaction model | UTXO                                                                  | Address:Balance |
+| Fork Resolution   | Uses Proof-of-Work and first-come-first-serve if forks have same PoW	| Compares chain length and uses the longer chain |
