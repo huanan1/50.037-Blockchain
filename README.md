@@ -144,3 +144,4 @@ Implemented features:
 | Difficulty        | Dynamic, adjusts every 2 weeks                                        | Static          |
 | Transaction model | UTXO                                                                  | Address:Balance |
 | Fork Resolution   | Uses Proof-of-Work and first-come-first-serve if forks have same PoW	| Compares chain length and uses the longer chain |
+| Peer2Peer network | Peer discovery must happen                                            | All miners know the presence of all other miners | 
