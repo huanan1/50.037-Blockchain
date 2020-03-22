@@ -119,7 +119,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
     # merkletree = create_sample_merkle()
     miner_status = False
     list_of_blocks_selfish = []
-    SELFISH_LENGTH = 2
+    SELFISH_LENGTH = 5
     list_of_collected_selfish_blocks = []
     selfish_flush = False
     # Infinite loop
@@ -209,7 +209,6 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                                 block_data = pickle.dumps(block, protocol=2)
                                 for miner_ip in LIST_OF_MINER_IP:
                                     send_failed = True
-                                    # Retry until peer receives, idk i think prof say ok right? assume all in stable network lel
                                     while send_failed:
                                         try:
                                             requests.post("http://"+miner_ip +
