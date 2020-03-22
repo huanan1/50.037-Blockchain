@@ -203,15 +203,15 @@ Sends periodic checks for account balances for the first two entries in `ports_m
 ## Documentation of displayed features
 ###	Simulate miners running Nakamoto consensus and making transactions
 Implemented features:
-- new blocks arrive every few (2-5) seconds
-  - static difficulty of `00000f`
-- coinbase transaction of 100 SUTDcoins
-  - under `create_merkle` method in `miner.py`
-- transactions occur randomly
-  - see `random_transactions.py`
-- validation checks (no double spending, validated sender, sender must have enough money)
-  - see `network_block` method in `blockchain.py`
-- forks resolved
+- New blocks arrive every few (2-5) seconds
+  - Static difficulty of `00000f`
+- Coinbase transaction of 100 SUTDcoins
+  - Under `create_merkle` method in `miner.py`
+- Transactions occur randomly
+  - See `random_transactions.py`
+- Validation checks (no double spending, validated sender, sender must have enough money)
+  - See `network_block` method in `blockchain.py`
+- Forks resolved
   - Example:
   ![fork](https://user-images.githubusercontent.com/28921108/77232316-36d28e80-6bdb-11ea-83a9-4d76e346a78e.png)
   - Red miner originally had the block `0000ae565b` after `000044cc2f` while white miner had the block `00006e7b8c`. The fork is only resolved when one chain becomes longer. The miner(s) with the shorter chain will stop mining on that chain and work on the longer one instead.
@@ -220,12 +220,12 @@ Implemented features:
 
 ### Interaction of SPV clients with miners
 Implemented features:
-- acts as a wallet, and has both a public and private key
-- associated key pairs
-- receive block headers
-  - block headers are obtained from a separate blockchain. See `spv_blockchain.py`
-- receive and verify transactions
-- send transactions
+- Acts as a wallet, and has both a public and private key
+- Associate key pairs
+- Receive block headers
+  - Block headers are obtained from a separate blockchain. See `spv_blockchain.py`
+- Receive and verify transactions
+- Send transactions
 
 ### Ledger
 Implemented features:
