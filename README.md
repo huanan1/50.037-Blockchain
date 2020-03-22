@@ -66,6 +66,118 @@ Sample startup:
 - `spv_client.py -p 2300 -m miner_ip.txt`
 - `spv_client.py -p 1500 -m miner_ip.txt -w c218953cd1e1ebff4cead74f25420dcffd6239ed1f48796f`
 
+## Endpoints
+
+#### /request_blockchain_header_hash
+`GET`
+
+**Miner** and **SPV**
+
+Returns an ordered list of header hashes of the longest chain from genesis block
+
+#### /request_blockchain
+`GET`
+
+**Miner** and **SPV**
+
+Returns an ordered list of blocks of the longest chain from genesis block
+
+**Note:** Miner includes list of ordered transactions for every block, while SPV does not
+
+#### /request_full_blockchain
+`GET`
+
+**Miner** and **SPV**
+
+Returns an ordered list of blocks of the longest chain from genesis block
+
+**Note:** Miner includes list of ordered transactions for every block, while SPV does not
+
+#### /request_block/<header_hash>
+`GET`
+
+`/request_block/00000058867c95e45874590d1588aeb589b852bba48cdd5021e9ea5fda76457d`
+
+**Miner** and **SPV**
+
+Returns full information for that particular block
+
+**Note:** Miner includes list of ordered transactions, while SPV does not
+
+#### /account_balance
+`GET`
+
+**Miner** and **SPV**
+
+Returns amount of coins in the queried SPV or Miner's wallet
+
+**Note:** Miner will retrieve information locally, while SPV will ask a random full node/Miner
+
+#### /account_balance/<public_key>
+`GET`
+
+`/account_balance/c0af4cd2f20cebccea8bedb0a7841d373cc51166ebbac05e`
+
+**Miner** and **SPV**
+
+Returns amount of coins in that particular account
+
+**Note:** Miner will retrieve information locally, while SPV will ask a random full node/Miner
+
+#### /send_transaction?receiver=<receiver>&amount=<amount>
+`POST`
+
+`/send_transaction?receiver=76d0551750414d853b0b6348b9da12352cf5ba36b2cd72ffbece44dfd162d1153dc85d643b4438c43bd4e841f4083012&amount=34`
+
+**Miner** and **SPV**
+
+Submits transaction to the network to be processed
+
+#### /verify_transaction/<txid>
+`GET`
+
+`/verify_transaction/3c06ac050125b8e733fcfd0daafe081fe573142d68c317a29f9d0a86ba8cc83d`
+
+**Miner** and **SPV**
+
+Returns information about the particular transactions, including number of confirmations
+
+**Note:** Miner will retrieve and verify locally, while SPV will ask a random full node/Miner for merkle tree's proof and verify locally with the merkle tree root and header hashes
+
+#### /verify_transaction_from_spv
+`POST`
+
+**Not meant to be accessed by user**
+
+**Miner** only
+
+Called by SPV to get the merkle tree proof data from Miner
+
+#### /block
+`POST`
+
+**Not meant to be accessed by user**
+
+**Miner** only
+
+Called by other Miners, able to receive Block objects as Pickles from other Miners in body
+
+#### /transaction
+`POST`
+
+**Not meant to be accessed by user**
+
+Called by other Miners and SPV, able to receive Transactions as json in body
+
+#### /block_header
+`POST`
+
+**Not meant to be accessed by user**
+
+**SPV** only
+
+Called by Miners, able to receive SPVBlock objects as Pickles from other Miners in body
+
 
 ## Documentation of displayed features
 ###	Simulate miners running Nakamoto consensus and making transactions
