@@ -72,16 +72,10 @@ class Miner:
         for transaction in list_of_raw_transactions:
             if tx_to_ignore is not None and transaction in tx_to_ignore:
                 print(f"ignoring transaction: {transaction}")
-            # for transaction in TEST_LIST:
-            # print("entering verify")
-            # TODO: check if transaction makes sense in the ledger
-            #if ledger.verify_transaction(transaction, list_of_validated_transactions, block.transactions.leaf_set, block.previous_header_hash, self.blockchain):
             elif ledger.verify_transaction(transaction, list_of_validated_transactions, binascii.hexlify(block.header_hash()).decode(), self.blockchain):
-
                 list_of_validated_transactions.append(transaction)
                 print("verification complete")
         merkletree = MerkleTree()
-        # TODO: Add coinbase TX
         # CHECK SENDER
         coinbase_sender_pk = SigningKey.generate()
         coinbase_sender_vk = coinbase_sender_pk.get_verifying_key()
@@ -92,8 +86,6 @@ class Miner:
 
         for transaction in list_of_validated_transactions:
             transaction_object = transaction.to_json()
-            # print(type(transaction_object))
             merkletree.add(transaction_object)
         merkletree.build()
-        # print(merkletree.leaf_set)
         return merkletree, ledger
