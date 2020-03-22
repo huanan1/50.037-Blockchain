@@ -14,7 +14,6 @@ from ecdsa import SigningKey
 from flask import Flask, request, jsonify
 from multiprocessing import Process, Queue
 from spv_blockchain import SPVBlock
-import json
 from miner import Miner
 
 from blockchain import BlockChain, Block, Ledger
@@ -27,9 +26,8 @@ app = Flask(__name__)
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
+
 # Parsing arguments when entered via CLI
-
-
 def parse_arguments(argv):
     inputfile = ''
     outputfile = ''
@@ -187,7 +185,7 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                                         time.sleep(0.1)
                         list_of_blocks_selfish = []
                 break
-            # Checks value of nonce, as checking queue every cycle makes it very laggy
+            # Runs this area only once every 100 nonce, as checking queue every cycle makes it very laggy
             if miner.nonce % 100 == 0:
                 # Check if new blocks have been detected
                 block_queue_status_initial = block_queue.empty()
@@ -241,18 +239,132 @@ blockchain_request_queue = Queue()
 blockchain_reply_queue = Queue()
 
 
-@app.route('/block', methods=['POST'])
-def new_block_network():
-    new_block = pickle.loads(request.get_data())
-    block_queue.put(new_block)
-    return ""
+@app.route('/request_blockchain_header_hash')
+def request_blockchain_headers():
+    blockchain_request_queue.put(None)
+    return jsonify({"blockchain_headers_hash": blockchain_reply_queue.get()[0]})
 
 
-@app.route('/transaction', methods=['POST'])
-def new_transaction_network():
-    new_transaction = Transaction.from_json(request.data.decode())
-    transaction_queue.put(new_transaction)
-    return ""
+@app.route('/request_blockchain')
+def request_blockchain():
+    blockchain_request_queue.put(None)
+    queue_reply = blockchain_reply_queue.get()
+    cleaned_keys, chain = queue_reply[0], queue_reply[1]
+    lst_chain = []
+    for i in cleaned_keys:
+        block_dictionary = dict()
+        block = chain[i]
+        block_dictionary["header_hash"] = binascii.hexlify(
+            block.header_hash()).decode()
+        block_dictionary["previous_header_hash"] = block.previous_header_hash
+        block_dictionary["hash_tree_root"] = binascii.hexlify(
+            block.hash_tree_root).decode()
+        block_dictionary["timestamp"] = block.timestamp
+        block_dictionary["nonce"] = block.nonce
+        transaction_list = []
+        for i in block.transactions.leaf_set:
+            transaction_list.append(i.decode())
+        block_dictionary["transactions"] = transaction_list
+        lst_chain.append(block_dictionary)
+    return jsonify(lst_chain)
+
+
+@app.route('/request_full_blockchain')
+def request_full_blockchain():
+    blockchain_request_queue.put(None)
+    chain = blockchain_reply_queue.get()[1]
+    dic_chain = dict()
+    for i in chain:
+        block_dictionary = dict()
+        block = chain[i]
+        block_dictionary["header_hash"] = binascii.hexlify(
+            block.header_hash()).decode()
+        block_dictionary["previous_header_hash"] = block.previous_header_hash
+        block_dictionary["hash_tree_root"] = binascii.hexlify(
+            block.hash_tree_root).decode()
+        block_dictionary["timestamp"] = block.timestamp
+        block_dictionary["nonce"] = block.nonce
+        transaction_list = []
+        for i in block.transactions.leaf_set:
+            transaction_list.append(i.decode())
+        block_dictionary["transactions"] = transaction_list
+        dic_chain[block_dictionary["header_hash"]] = block_dictionary
+    return jsonify(dic_chain)
+
+
+@app.route('/request_block/<header_hash>')
+def request_block(header_hash):
+    blockchain_request_queue.put(None)
+    chain = blockchain_reply_queue.get()[1]
+    try:
+        block = chain[header_hash]
+    except:
+        return jsonify("Unable to find block")
+    block_dictionary = dict()
+    block_dictionary["header_hash"] = header_hash
+    block_dictionary["previous_header_hash"] = block.previous_header_hash
+    block_dictionary["hash_tree_root"] = binascii.hexlify(
+        block.hash_tree_root).decode()
+    block_dictionary["timestamp"] = block.timestamp
+    block_dictionary["nonce"] = block.nonce
+    transaction_list = []
+    for i in block.transactions.leaf_unset:
+        transaction_list.append(i.decode())
+    block_dictionary["transactions"] = transaction_list
+    return jsonify(block_dictionary)
+
+
+@app.route('/account_balance')
+def request_my_account_balance():
+    blockchain_request_queue.put(None)
+    ledger = blockchain_reply_queue.get()[2]
+    try:
+        reply = {"public_key": PUBLIC_KEY_STRING,
+                 "amount": ledger[PUBLIC_KEY_STRING]}
+        return jsonify(reply)
+    except:
+        return jsonify("No coins in account yet")
+
+
+@app.route('/account_balance/<public_key>')
+def request_account_balance(public_key):
+    blockchain_request_queue.put(None)
+    ledger = blockchain_reply_queue.get()[2]
+    print(ledger)
+    try:
+        reply = {"public_key": public_key, "amount": ledger[public_key]}
+        return jsonify(reply)
+    except:
+        return jsonify("Cannot find account or no coins in account yet")
+
+
+@app.route('/send_transaction', methods=['POST'])
+def request_send_transaction():
+    receiver_public_key = request.args.get('receiver', '')
+    amount = request.args.get('amount', '')
+    blockchain_request_queue.put(None)
+    ledger = blockchain_reply_queue.get()[2]
+    balance = ledger[PUBLIC_KEY_STRING]
+    if balance >= int(amount):
+        new_transaction = Transaction(
+            PUBLIC_KEY, receiver_public_key, int(amount), sender_pk=PRIVATE_KEY)
+    else:
+        return ("Insufficient balance in account to proceed.")
+
+    for miner in LIST_OF_MINER_IP:
+        not_sent = True
+        # execute post request to broadcast transaction
+        while not_sent:
+            try:
+                requests.post(
+                    url="http://" + miner + "/transaction",
+                    data=new_transaction.to_json()
+                )
+                not_sent = False
+            except:
+                time.sleep(0.1)
+    not_sent = True
+    return jsonify(new_transaction.to_json())
 
 
 @app.route('/verify_transaction/<txid>', methods=['GET'])
@@ -306,132 +418,18 @@ def verify_transaction_from_spv():
     return ""
 
 
-@app.route('/request_blockchain_header_hash')
-def request_blockchain_headers():
-    blockchain_request_queue.put(None)
-    return jsonify({"blockchain_headers_hash": blockchain_reply_queue.get()[0]})
+@app.route('/block', methods=['POST'])
+def new_block_network():
+    new_block = pickle.loads(request.get_data())
+    block_queue.put(new_block)
+    return ""
 
 
-@app.route('/request_full_blockchain')
-def request_full_blockchain():
-    blockchain_request_queue.put(None)
-    chain = blockchain_reply_queue.get()[1]
-    dic_chain = dict()
-    for i in chain:
-        block_dictionary = dict()
-        block = chain[i]
-        block_dictionary["header_hash"] = binascii.hexlify(
-            block.header_hash()).decode()
-        block_dictionary["previous_header_hash"] = block.previous_header_hash
-        block_dictionary["hash_tree_root"] = binascii.hexlify(
-            block.hash_tree_root).decode()
-        block_dictionary["timestamp"] = block.timestamp
-        block_dictionary["nonce"] = block.nonce
-        transaction_list = []
-        for i in block.transactions.leaf_set:
-            transaction_list.append(i.decode())
-        block_dictionary["transactions"] = transaction_list
-        dic_chain[block_dictionary["header_hash"]] = block_dictionary
-    return jsonify(dic_chain)
-
-
-@app.route('/request_blockchain')
-def request_blockchain():
-    blockchain_request_queue.put(None)
-    queue_reply = blockchain_reply_queue.get()
-    cleaned_keys, chain = queue_reply[0], queue_reply[1]
-    lst_chain = []
-    for i in cleaned_keys:
-        block_dictionary = dict()
-        block = chain[i]
-        block_dictionary["header_hash"] = binascii.hexlify(
-            block.header_hash()).decode()
-        block_dictionary["previous_header_hash"] = block.previous_header_hash
-        block_dictionary["hash_tree_root"] = binascii.hexlify(
-            block.hash_tree_root).decode()
-        block_dictionary["timestamp"] = block.timestamp
-        block_dictionary["nonce"] = block.nonce
-        transaction_list = []
-        for i in block.transactions.leaf_set:
-            transaction_list.append(i.decode())
-        block_dictionary["transactions"] = transaction_list
-        lst_chain.append(block_dictionary)
-    return jsonify(lst_chain)
-
-
-@app.route('/request_block/<header_hash>')
-def request_block(header_hash):
-    blockchain_request_queue.put(None)
-    chain = blockchain_reply_queue.get()[1]
-    try:
-        block = chain[header_hash]
-    except:
-        return jsonify("Unable to find block")
-    block_dictionary = dict()
-    block_dictionary["header_hash"] = header_hash
-    block_dictionary["previous_header_hash"] = block.previous_header_hash
-    block_dictionary["hash_tree_root"] = binascii.hexlify(
-        block.hash_tree_root).decode()
-    block_dictionary["timestamp"] = block.timestamp
-    block_dictionary["nonce"] = block.nonce
-    transaction_list = []
-    for i in block.transactions.leaf_unset:
-        transaction_list.append(i.decode())
-    block_dictionary["transactions"] = transaction_list
-    return jsonify(block_dictionary)
-
-
-@app.route('/account_balance/<public_key>')
-def request_account_balance(public_key):
-    blockchain_request_queue.put(None)
-    ledger = blockchain_reply_queue.get()[2]
-    print(ledger)
-    try:
-        reply = {"public_key": public_key, "amount": ledger[public_key]}
-        return jsonify(reply)
-    except:
-        return jsonify("Cannot find account or no coins in account yet")
-
-
-@app.route('/account_balance')
-def request_my_account_balance():
-    blockchain_request_queue.put(None)
-    ledger = blockchain_reply_queue.get()[2]
-    try:
-        reply = {"public_key": PUBLIC_KEY_STRING,
-                 "amount": ledger[PUBLIC_KEY_STRING]}
-        return jsonify(reply)
-    except:
-        return jsonify("No coins in account yet")
-
-
-@app.route('/send_transaction', methods=['POST'])
-def request_send_transaction():
-    receiver_public_key = request.args.get('receiver', '')
-    amount = request.args.get('amount', '')
-    blockchain_request_queue.put(None)
-    ledger = blockchain_reply_queue.get()[2]
-    balance = ledger[PUBLIC_KEY_STRING]
-    if balance >= int(amount):
-        new_transaction = Transaction(
-            PUBLIC_KEY, receiver_public_key, int(amount), sender_pk=PRIVATE_KEY)
-    else:
-        return ("Insufficient balance in account to proceed.")
-
-    for miner in LIST_OF_MINER_IP:
-        not_sent = True
-        # execute post request to broadcast transaction
-        while not_sent:
-            try:
-                requests.post(
-                    url="http://" + miner + "/transaction",
-                    data=new_transaction.to_json()
-                )
-                not_sent = False
-            except:
-                time.sleep(0.1)
-    not_sent = True
-    return jsonify(new_transaction.to_json())
+@app.route('/transaction', methods=['POST'])
+def new_transaction_network():
+    new_transaction = Transaction.from_json(request.data.decode())
+    transaction_queue.put(new_transaction)
+    return ""
 
 
 if __name__ == '__main__':
