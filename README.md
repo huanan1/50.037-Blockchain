@@ -12,15 +12,15 @@ pip3 install -r requirements.txt
 All demonstrations can either be done locally or across multiple computers.
 
 ### Automated local deployment
-`build_miners_local_automation.py` allows for quick local deployment and demonstration of the SUTDCoin network. It will run as many instances as there are in `ports_miner.txt` for miners and `ports_spv.txt` for SPV Clients. The formatting of both files will be touched on later.
+`build_local_automation.py` allows for quick local deployment and demonstration of the SUTDCoin network. It will run as many instances as there are in `ports_miner.txt` for miners and `ports_spv.txt` for SPV Clients. The formatting of both files will be touched on later.
 
 It runs both `miner_manage.py` and `spv_client.py` with preset arguments, some of which are taken from the `ports_*.txt` files.
 
-| Command                                         | Demo                   |
-| ----------------------------------------------- | ---------------------- |
-| `python3 build_miners_local_automation.py`      | Multiple honest miners |
-| `python3 build_miners_local_automation.py -s 1` | Selfish mining demo    |
-| `python3 build_miners_local_automation.py -d 1` | Double-spending demo   |
+| Command                                  | Demo                   |
+| ---------------------------------------- | ---------------------- |
+| `python3 build_local_automation.py`      | Multiple honest miners |
+| `python3 build_local_automation.py -s 1` | Selfish mining demo    |
+| `python3 build_local_automation.py -d 1` | Double-spending demo   |
 
 #### ports_*.txt format
 Both `ports_miner.txt` and `ports_spv.txt` have identical formats.
@@ -41,13 +41,13 @@ There are two kinds of clients to be deployed, miners and SPV clients, using `mi
 `miner_manage.py`
 | Argument          | Description                                                | Example      | Additional Notes                                                                         |
 | ----------------- | ---------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------- |
-| -p, --port        | Port number of miner to run on                             | 25100        | **(Mandatory)**                                                                          |
-| -m, --iminerfile  | Directory of list of other miner IPs (10.0.2.5:2134)       | miner_ip.txt | **(Optional)**                                                                           |
-| -s, --ispvfile    | Directory of list of other miner IPs (10.0.2.6:213)        | spv_ip.txt   | **(Optional)**                                                                           |
-| -c, --color       | Color of text                                              | r            | **(Optional)** Available colors: Red, White(Default), Green, Yellow, Blue, Magenta, Cyan |
-| -d, --description | Configures how much information to print to console        | 2            | **(Optional)** 1(default): More information; 2: Less information                         |
-| -f, --selfish     | Configures the miner to become a selfish miner             | 1            | **(Optional)** 0(Default): Honest miner; 1: Selfish miner                                |
-| -w, --wallet      | Sets the wallet's private key, if empty, generates new key | b0cfe80...   | **(Optional)**                                                                           |
+| -p, --port        | Port number of miner to run on                             | 25100        | **[Mandatory]**                                                                          |
+| -m, --iminerfile  | Directory of list of other miner IPs (10.0.2.5:2134)       | miner_ip.txt | **[Optional]**                                                                           |
+| -s, --ispvfile    | Directory of list of other miner IPs (10.0.2.6:213)        | spv_ip.txt   | **[Optional]**                                                                           |
+| -c, --color       | Color of text                                              | r            | **[Optional]** Available colors: Red, White(Default), Green, Yellow, Blue, Magenta, Cyan |
+| -d, --description | Configures how much information to print to console        | 2            | **[Optional]** 1(default): More information; 2: Less information                         |
+| -f, --selfish     | Configures the miner to become a selfish miner             | 1            | **[Optional]** 0(Default): Honest miner; 1: Selfish miner                                |
+| -w, --wallet      | Sets the wallet's private key, if empty, generates new key | b0cfe80...   | **[Optional]**                                                                           |
 
 Sample startup:
 - `miner_manage.py -p 2200`
@@ -58,9 +58,9 @@ Sample startup:
 `spv_client.py`
 | Argument         | Description                                                | Example      | Additional Notes |
 | ---------------- | ---------------------------------------------------------- | ------------ | ---------------- |
-| -p, --port       | Port number of SPV to run on                               | 25200        | **(Mandatory)**  |
-| -m, --iminerfile | Directory of list of other miner IPs (10.0.2.5:2134)       | miner_ip.txt | **(Mandatory)**  |
-| -w, --wallet     | Sets the wallet's private key. If empty, generates new key | b0cfe80...   | **(Optional)**   |
+| -p, --port       | Port number of SPV to run on                               | 25200        | **[Mandatory]**  |
+| -m, --iminerfile | Directory of list of other miner IPs (10.0.2.5:2134)       | miner_ip.txt | **[Mandatory]**  |
+| -w, --wallet     | Sets the wallet's private key. If empty, generates new key | b0cfe80...   | **[Optional]**   |
 
 Sample startup:
 - `spv_client.py -p 2300 -m miner_ip.txt`
@@ -97,7 +97,7 @@ Returns an ordered list of blocks of the longest chain from genesis block
 **Note:** Miner includes list of ordered transactions for every block, while SPV does not
 
 ------
-#### /request_block/<header_hash>
+#### /request_block/{header_hash}
 `GET` `/request_block/00000058867c95e45874590d1588aeb589b852bba48cdd5021e9ea5fda76457d`
 
 **Miner** and **SPV**
@@ -117,7 +117,7 @@ Returns amount of coins in the queried SPV or Miner's wallet
 **Note:** Miner will retrieve information locally, while SPV will ask a random full node/Miner
 
 ------
-#### /account_balance/<public_key>
+#### /account_balance/{public_key}
 `GET` `/account_balance/c0af4cd2f20cebccea8bedb0a7841d373cc51166ebbac05e`
 
 **Miner** and **SPV**
@@ -127,7 +127,7 @@ Returns amount of coins in that particular account
 **Note:** Miner will retrieve information locally, while SPV will ask a random full node/Miner
 
 ------
-#### /send_transaction?receiver=<receiver>&amount=<amount>
+#### /send_transaction?receiver={receiver}&amount={amount}
 `POST` `/send_transaction?receiver=76d0551750414d853b0b6348b9da12352cf5ba36b2cd72ffbece44dfd162d1153dc85d643b4438c43bd4e841f4083012&amount=34`
 
 **Miner** and **SPV**
@@ -135,7 +135,7 @@ Returns amount of coins in that particular account
 Submits transaction to the network to be processed
 
 ------
-#### /verify_transaction/<txid>
+#### /verify_transaction/{txid}
 `GET` `/verify_transaction/3c06ac050125b8e733fcfd0daafe081fe573142d68c317a29f9d0a86ba8cc83d`
 
 **Miner** and **SPV**
