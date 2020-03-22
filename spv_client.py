@@ -71,6 +71,7 @@ class SPVClient:
     Each SPVClient acts as a wallet, and should have a private and public key.
     The SPVClient should be able to store all the headers of the blockchain. 
     The SPVClient should also be able to send transactions.
+    The SPVClient receive transactions and verify them
     '''
 
     def __init__(self, private_key, public_key, public_key_string, spv_blockchain):
@@ -86,10 +87,12 @@ spv_blockchain = SPVBlockChain()
 spv_client = SPVClient(PRIVATE_KEY, PUBLIC_KEY,
                        PUBLIC_KEY_STRING, spv_blockchain)
 
+
 @app.route('/request_blockchain_header_hash')
 def request_blockchain_headers():
     spv_client.spv_blockchain.resolve()
     return jsonify({"blockchain_headers_hash": spv_client.spv_blockchain.cleaned_keys})
+
 
 @app.route('/request_full_blockchain')
 def request_full_blockchain():
@@ -106,6 +109,7 @@ def request_full_blockchain():
         block_dictionary["nonce"] = block.nonce
         dic_chain[block_dictionary["header_hash"]] = block_dictionary
     return jsonify(dic_chain)
+
 
 @app.route('/request_blockchain')
 def request_blockchain():
@@ -124,6 +128,7 @@ def request_blockchain():
         lst_chain.append(block_dictionary)
     return jsonify(lst_chain)
 
+
 @app.route('/request_block/<header_hash>')
 def request_block(header_hash):
     chain = spv_client.spv_blockchain.chain
@@ -139,6 +144,7 @@ def request_block(header_hash):
     block_dictionary["timestamp"] = block.timestamp
     block_dictionary["nonce"] = block.nonce
     return jsonify(block_dictionary)
+
 
 @app.route('/block_header', methods=['POST'])
 def new_block_header_network():
@@ -231,6 +237,7 @@ def request_account_balance(public_key):
         return jsonify(response)
     except:
         return jsonify("Cannot find account")
+
 
 @app.route('/account_balance')
 def request_my_account_balance():

@@ -14,12 +14,13 @@ class Transaction:
             self.sender_vk = binascii.hexlify(sender_vk.to_string()).decode()
         except:
             # already in string format
-            self.sender_vk = sender_vk # public key
+            self.sender_vk = sender_vk  # public key
         # print(type(self.sender_vk))
         try:
-            self.receiver_vk = binascii.hexlify(receiver_vk.to_string()).decode()
+            self.receiver_vk = binascii.hexlify(
+                receiver_vk.to_string()).decode()
         except:
-            self.receiver_vk = receiver_vk # verifying key
+            self.receiver_vk = receiver_vk  # verifying key
         self.sender_pk = sender_pk  # private key
         assert amount > 0
         self.amount = amount
@@ -35,7 +36,8 @@ class Transaction:
 
     def generate_txid(self):
         m = hashlib.sha256()
-        m.update((self.sender_vk + self.receiver_vk + str(self.amount) + str(self.comment) + str(self.time)).encode())
+        m.update((self.sender_vk + self.receiver_vk + str(self.amount) +
+                  str(self.comment) + str(self.time)).encode())
         return m.hexdigest()
 
     def to_json(self):
@@ -58,7 +60,8 @@ class Transaction:
         Instantiates/Deserializes object from JSON string
         '''
         trans = json.loads(json_str)
-        transaction = Transaction(trans['sender_vk'], trans['receiver_vk'], int(trans['amount']), trans['comment'], float(trans['time']), trans['txid'], bytes.fromhex(trans['sig']))
+        transaction = Transaction(trans['sender_vk'], trans['receiver_vk'], int(
+            trans['amount']), trans['comment'], float(trans['time']), trans['txid'], bytes.fromhex(trans['sig']))
         return transaction
 
     def transaction_to_string(self):
@@ -71,7 +74,7 @@ class Transaction:
         '''
         Sign the encoded (byte-form) version of transaction object
         '''
-        
+
         return self.sender_pk.sign(self.transaction_to_string().encode())
 
     def validate(self, signature):
@@ -80,16 +83,19 @@ class Transaction:
         Compare signature (signed transaction object in bytes) and transaction object in bytes
         i.e. s(b) and b
         '''
-        sender_vk_key = VerifyingKey.from_string(binascii.unhexlify(bytes(self.sender_vk, 'utf-8')))
-        assert sender_vk_key.verify(signature, self.transaction_to_string().encode())
+        sender_vk_key = VerifyingKey.from_string(
+            binascii.unhexlify(bytes(self.sender_vk, 'utf-8')))
+        assert sender_vk_key.verify(
+            signature, self.transaction_to_string().encode())
 
     def __str__(self):
         return self.transaction_to_string()
 
     def __eq__(self, other):
         # Check if all parts of the transaction are equal
-        return(self.sender_vk == other.sender_vk and self.receiver_vk == other.receiver_vk and self.amount == other.amount and self.comment == other.comment and 
-                self.txid == other.txid and self.time == other.time)
+        return(self.sender_vk == other.sender_vk and self.receiver_vk == other.receiver_vk and self.amount == other.amount and self.comment == other.comment and
+               self.txid == other.txid and self.time == other.time)
+
 
 if __name__ == '__main__':
     sender_pk = SigningKey.generate()
@@ -105,5 +111,5 @@ if __name__ == '__main__':
     # print(t1_json)
     print(t1)
     print(t1_back)
-    print(t1==t1_back)
+    print(t1 == t1_back)
     t1.validate(t1_back.sig)

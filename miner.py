@@ -6,6 +6,7 @@ from ecdsa import SigningKey
 from transaction import Transaction
 import binascii
 
+
 class Miner:
     def __init__(self, blockchain, public_key=None):
         self.blockchain = copy.deepcopy(blockchain)
@@ -28,9 +29,9 @@ class Miner:
         return False
 
     def mine_from_old_block(self, merkletree, ledger, block_hash):
-        block = Block(merkletree, block_hash, merkletree.get_root(), 
-                self.current_time, self.nonce, ledger)
-        
+        block = Block(merkletree, block_hash, merkletree.get_root(),
+                      self.current_time, self.nonce, ledger)
+
         if self.blockchain.add(block):
             # If the add is successful, reset
             self.reset_new_mine()
@@ -50,6 +51,9 @@ class Miner:
         # Checks if the n
         if self.blockchain.network_add(block):
             self.reset_new_mine()
+            return True
+        else:
+            return False
 
     def create_merkle(self, transaction_queue, tx_to_ignore=None):
         # print("entered create merkel")
@@ -69,16 +73,10 @@ class Miner:
         for transaction in list_of_raw_transactions:
             if tx_to_ignore is not None and transaction in tx_to_ignore:
                 print(f"ignoring transaction: {transaction}")
-            # for transaction in TEST_LIST:
-            # print("entering verify")
-            # TODO: check if transaction makes sense in the ledger
-            #if ledger.verify_transaction(transaction, list_of_validated_transactions, block.transactions.leaf_set, block.previous_header_hash, self.blockchain):
             elif ledger.verify_transaction(transaction, list_of_validated_transactions, binascii.hexlify(block.header_hash()).decode(), self.blockchain):
-
                 list_of_validated_transactions.append(transaction)
                 print("verification complete")
         merkletree = MerkleTree()
-        # TODO: Add coinbase TX
         # CHECK SENDER
         coinbase_sender_pk = SigningKey.generate()
         coinbase_sender_vk = coinbase_sender_pk.get_verifying_key()
@@ -89,8 +87,6 @@ class Miner:
 
         for transaction in list_of_validated_transactions:
             transaction_object = transaction.to_json()
-            # print(type(transaction_object))
             merkletree.add(transaction_object)
         merkletree.build()
-        # print(merkletree.leaf_set)
         return merkletree, ledger
