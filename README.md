@@ -276,7 +276,7 @@ Implemented features:
 | Property                     | Bitcoin                                   | SUTDcoin                                         |
 | ---------------------------- | ----------------------------------------- | ------------------------------------------------ |
 | Name                         | Bitcoin                                   | SUTDcoin                                         |
-| Difficulty                   | Dynamic, adjusts every 2 weeks            | Static                                           |
+| Difficulty                   | Dynamic, adjusts about once every 2 weeks | Static                                           |
 | Transaction model            | UTXO                                      | Address:Balance                                  |
 | Peer2Peer network            | Peer discovery must happen                | All miners know the presence of all other miners |
 | Block headers for SPVClients | Query network nodes to find longest chain | Obtained from spv blockchain                     |
