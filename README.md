@@ -1,5 +1,5 @@
 # Group: GOLD EXPERIENCE
-
+*Yes, the group name is a Jojo reference*
 ## SUTDcoin
 ## Setting up the environment
 ```
@@ -10,14 +10,67 @@ pip3 install -r requirements.txt
 ```
 
 ## Usage
-All demonstrations can either be done locally or across multiple computers. The instructions here are for running on a single machine.
+All demonstrations can either be done locally or across multiple computers.
 
+### Automated local deployment
+`build_miners_local_automation.py` allows for quick local deployment and demonstration of the SUTDCoin network. It will run as many instances as there are in `ports_miner.txt` for miners and `ports_spv.txt` for SPV Clients. The formatting of both files will be touched on later.
 
-| Command                                         | Demo                      |
-| ----------------------------------------------- | ------------------------  |
-| `python3 build_miners_local_automation.py`      | Multiple honest miners    |
-| `python3 build_miners_local_automation.py -s 1` | One miner will be selfish |
-| `python3 build_miners_local_automation.py -d 1` | Double-spending           |
+It runs both `miner_manage.py` and `spv_client.py` with preset arguments, some of which are taken from the `ports_*.txt` files.
+
+| Command                                         | Demo                   |
+| ----------------------------------------------- | ---------------------- |
+| `python3 build_miners_local_automation.py`      | Multiple honest miners |
+| `python3 build_miners_local_automation.py -s 1` | Selfish mining demo    |
+| `python3 build_miners_local_automation.py -d 1` | Double-spending demo   |
+
+#### ports_*.txt format
+Both `ports_miner.txt` and `ports_spv.txt` have identical formats.
+
+The format in the current repo is as follows:
+`<port_number>\t<private_key>\t<public_key>\n`
+**Note:** Ensure 'tab character' is in between each field, as some IDEs might do 4 spaces
+
+- `<port_number>` field is mandatory, and the code will run as many instances as there are ports in the file
+- `<private_key>` field is not mandatory, as the `miner_manage.py` and `spv_client.py` files will generate their own private keys when no input is detected
+- `<public_key>` field is not used by any of the codes, and is more of a reference for the user for testing
+
+### Network deployment
+There are two kinds of clients to be deployed, miners and SPV clients, using `miner_manage.py` and `spv_client.py` respectively.
+
+### Miner
+`miner_manage.py`
+| Argument          | Description                                                | Example      | Additional Notes                                                                         |
+| ----------------- | ---------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------- |
+| -p, --port        | Port number of miner to run on                             | 25100        | **(Mandatory)**                                                                          |
+| -m, --iminerfile  | Directory of list of other miner IPs (10.0.2.5:2134)       | miner_ip.txt | **(Optional)**                                                                           |
+| -s, --ispvfile    | Directory of list of other miner IPs (10.0.2.6:213)        | spv_ip.txt   | **(Optional)**                                                                           |
+| -c, --color       | Color of text                                              | r            | **(Optional)** Available colors: Red, White(Default), Green, Yellow, Blue, Magenta, Cyan |
+| -d, --description | Configures how much information to print to console        | 2            | **(Optional)** 1(default): More information; 2: Less information                         |
+| -f, --selfish     | Configures the miner to become a selfish miner             | 1            | **(Optional)** 0(Default): Honest miner; 1: Selfish miner                                |
+| -w, --wallet      | Sets the wallet's private key, if empty, generates new key | b0cfe80...   | **(Optional)**                                                                           |
+
+Sample startup:
+
+`miner_manage.py -p 2200`
+
+`miner_manage.py -p 1500 -m miner_ip.txt -c g -s spv_ip.txt -d 2 -w 
+b0cfe80dbda0d882b6d517321b3eb3343c48864ad097c5df`
+
+`miner_manage.py -p 1200 -m miner_ip.txt -c r -f 1`
+
+### Miner
+`spv_client.py`
+| Argument          | Description                                                | Example      | Additional Notes                                                                         |
+| ----------------- | ---------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------- |
+| -p, --port        | Port number of SPV to run on                             | 25200        | **(Mandatory)**                                                                          |
+| -m, --iminerfile  | Directory of list of other miner IPs (10.0.2.5:2134)       | miner_ip.txt | **(Mandatory)**                                                                           |
+| -w, --wallet      | Sets the wallet's private key, if empty, generates new key | b0cfe80...   | **(Optional)**                                                                           |
+
+Sample startup:
+
+`spv_client.py -p 2300 -m miner_ip.txt`
+
+`spv_client.py -p 1500 -m miner_ip.txt -w c218953cd1e1ebff4cead74f25420dcffd6239ed1f48796f`
 
 
 ## Documentation of displayed features
@@ -57,36 +110,33 @@ Implemented features:
 - Block following `000005d864` was originally `000005b93b` but is `0000061ea` after attack
 
 ### Selish-mining
-| Selfish miner    | Honest miner       |
-|------------------|--------------------|
-| 0 coins     | 0 coins    |
-| 0 coins     | 0 coins    |
-| 0 coins     | 0 coins    |
-| 300 coins   | 0 coins    |
-| 700 coins   | 500 coins  |
-| 1100 coins  | 800 coins  |
-| 1400 coins  | 1000 coins |
-| 1800 coins  | 1200 coins |
-| 2300 coins  | 1400 coins |
-| 2700 coins  | 200 coins  |
-| 3000 coins  | 400 coins  |
-| 3500 coins  | 200 coins  |
-| 3900 coins  | 500 coins  |
-| 4300 coins  | 200 coins  |
-| 4500 coins  | 300 coins  |
-| 4800 coins  | 600 coins  |
-| 5200 coins  | 800 coins  |
-| 5700 coins  | 200 coins  |
-| 6200 coins  | 200 coins  |
-| 6600 coins  | 200 coins  |
-| 7100 coins  | 200 coins  |
+| Selfish miner | Honest miner |
+| ------------- | ------------ |
+| 0 coins       | 0 coins      |
+| 400 coins     | 200 coins    |
+| 500 coins     | 300 coins    |
+| 800 coins     | 100 coins    |
+| 1200 coins    | 200 coins    |
+| 1300 coins    | 300 coins    |
+| 1700 coins    | 500 coins    |
+| 2000 coins    | 700 coins    |
+| 2400 coins    | 1200 coins   |
+| 2700 coins    | 100 coins    |
+| 3300 coins    | 400 coins    |
+| 3400 coins    | 700 coins    |
+| 3700 coins    | 1200 coins   |
+| 3400 coins    | 900 coins    |
+| 4000 coins    | 1200 coins   |
+| 4500 coins    | 1200 coins   |
+| 4700 coins    | 1700 coins   |
+| 5200 coins    | 2000 coins   |
+| 5500 coins    | 2000 coins   |
 - __DESCRIPTION of what a selfish miner does, how it manages to win despite not necesarily having majority hashing power__
 
 
 ## Major differences between Bitcoin and SUTDcoin
-| Property           | Bitcoin                               | SUTDcoin                 |
-| -----------------  | ------------------------------------- | ------------------------ |
-| Name               | Bitcoin                               | SUTDcoin                 |
-| Difficulty         | Dynamic, adjusts every 2 weeks        | Static                   |
-| Transaction model  | UTXO                                  | Address:Balance          |
-
+| Property          | Bitcoin                        | SUTDcoin        |
+| ----------------- | ------------------------------ | --------------- |
+| Name              | Bitcoin                        | SUTDcoin        |
+| Difficulty        | Dynamic, adjusts every 2 weeks | Static          |
+| Transaction model | UTXO                           | Address:Balance |
