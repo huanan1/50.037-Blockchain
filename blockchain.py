@@ -15,10 +15,10 @@ class Block:
         # Instantiates object from passed values
         self.transactions = transactions  # MerkleTree object
         self.previous_header_hash = previous_header_hash  # Previous hash in string
-        self.hash_tree_root = hash_tree_root  # tree root in bytes
-        self.timestamp = timestamp  # unix time in string
-        self.nonce = nonce  # nonce in int
-        self.ledger = ledger #ledger object
+        self.hash_tree_root = hash_tree_root  # Tree root in bytes
+        self.timestamp = timestamp  # Unix time in string
+        self.nonce = nonce  # Nonce in int
+        self.ledger = ledger #Ledger object
 
     def header_hash(self):
         # Creates header value
@@ -26,7 +26,7 @@ class Block:
             self.hash_tree_root).decode() + str(self.timestamp) + str(self.nonce)
         if self.previous_header_hash is not None:
             header_joined = self.previous_header_hash + header_joined
-        # Double hashes the header value, coz bitcoin does the same
+        # Double hashes the header value, as bitcoin does the same
         m = hashlib.sha256()
         m.update(header_joined.encode())
         round1 = m.digest()
@@ -35,19 +35,20 @@ class Block:
         return m.digest()
 
 class BlockChain:
-    # chain is a dictionary, key is hash header, value is the header metadata of blocks
+    # Chain is a dictionary -> {hash header (key): header metadata of blocks (value)}
     chain = dict()
     TARGET = b"\x00\x00\x0f\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
     last_hash = None
-    # Cleaned keys is an ordered list of all the header hashes, only updated on BlockChain.resolve() call
+    # cleaned_keys is an ordered list of all the header hashes, only updated on BlockChain.resolve() call
     cleaned_keys = []
-    # network cached blocks contain blocks that are rejected, key is prev hash header, value is block
+    # network_cached_blocks is a dictionary that contains blocks that are rejected ->  {prev hash header (key): block (value)}
     network_cached_blocks = dict()
 
     def __init__(self, miner_ips):
             self.miner_ips = miner_ips
 
     def retrieve_ledger(self):
+        # Obtain the most updated ledger from the latest block that was mined
         block = self.last_block()
         try:
             return block.ledger.balance
@@ -55,22 +56,22 @@ class BlockChain:
             return None
 
     def network_block_validate(self, block):
-        # check again that incoming block has prev hash and target < nonce (in case malicious miner publishing invalid blocks)
+        # Check that incoming block has prev hash and target < nonce (in case malicious miner publishing invalid blocks)
         check1 = self.validate(block)
-        # check if transactions are valid (sender has enough money, and TXIDs have not appeared in the previous blocks)
+        # Check if transactions are valid (sender has enough money, and TXIDs have not appeared in the previous blocks)
         check2 = self.verify_transactions(copy.deepcopy(block.transactions.leaf_set), block.previous_header_hash,block.ledger)
         return check1 and check2
 
     def network_add(self, block):
-        # check for genesis block
+        # Check for genesis block
         if block.previous_header_hash is None:
-            # check that number of transactions is 1 in genesis block
+            # Check that number of transactions is 1 in genesis block
             if len(block.transactions.leaf_set) != 1:
-                print("genesis block should have only one transaction.")
+                print("Genesis block should have only one transaction.")
                 return False
             coinbase_tx = Transaction.from_json(block.transactions.leaf_set[0])
             if coinbase_tx.amount != 100:
-                print("coinbase transaction should have amount == 100")
+                print("Coinbase transaction should have amount == 100")
                 return False
             self.chain[binascii.hexlify(block.header_hash()).decode()] = block
             return True
@@ -78,16 +79,14 @@ class BlockChain:
         if self.network_block_validate(block):
             header_hash = binascii.hexlify(block.header_hash()).decode()
             self.chain[header_hash] = block
-            # check rejected blocks
             time.sleep(0.05)
-            # print("looking through cached blocks...")
+            # Looks through cached blocks
             self.network_add_cached_blocks(self.network_cached_blocks)
             # print("finished looking through cached blocks")
             return True
         else:
             # print("\nSaved in cache: ", binascii.hexlify(block.header_hash()).decode(), self.chain)
             self.network_cached_blocks[binascii.hexlify(block.header_hash()).decode()] = copy.deepcopy(block)
-            # print(block.previous_header_hash)
             return False
     
     def network_add_cached_blocks(self,cached_blocks):
