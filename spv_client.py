@@ -94,23 +94,6 @@ def request_blockchain_headers():
     return jsonify({"blockchain_headers_hash": spv_client.spv_blockchain.cleaned_keys})
 
 
-@app.route('/request_full_blockchain')
-def request_full_blockchain():
-    chain = spv_client.spv_blockchain.chain
-    dic_chain = dict()
-    for i in chain:
-        block_dictionary = dict()
-        block = chain[i]
-        block_dictionary["header_hash"] = i
-        block_dictionary["previous_header_hash"] = block.previous_header_hash
-        block_dictionary["hash_tree_root"] = binascii.hexlify(
-            block.hash_tree_root).decode()
-        block_dictionary["timestamp"] = block.timestamp
-        block_dictionary["nonce"] = block.nonce
-        dic_chain[block_dictionary["header_hash"]] = block_dictionary
-    return jsonify(dic_chain)
-
-
 @app.route('/request_blockchain')
 def request_blockchain():
     spv_client.spv_blockchain.resolve()
@@ -127,6 +110,23 @@ def request_blockchain():
         block_dictionary["nonce"] = block.nonce
         lst_chain.append(block_dictionary)
     return jsonify(lst_chain)
+
+
+@app.route('/request_full_blockchain')
+def request_full_blockchain():
+    chain = spv_client.spv_blockchain.chain
+    dic_chain = dict()
+    for i in chain:
+        block_dictionary = dict()
+        block = chain[i]
+        block_dictionary["header_hash"] = i
+        block_dictionary["previous_header_hash"] = block.previous_header_hash
+        block_dictionary["hash_tree_root"] = binascii.hexlify(
+            block.hash_tree_root).decode()
+        block_dictionary["timestamp"] = block.timestamp
+        block_dictionary["nonce"] = block.nonce
+        dic_chain[block_dictionary["header_hash"]] = block_dictionary
+    return jsonify(dic_chain)
 
 
 @app.route('/request_block/<header_hash>')
@@ -146,11 +146,26 @@ def request_block(header_hash):
     return jsonify(block_dictionary)
 
 
-@app.route('/block_header', methods=['POST'])
-def new_block_header_network():
-    new_block_header = pickle.loads(request.get_data())
-    spv_client.spv_blockchain.network_add(new_block_header)
-    return ""
+@app.route('/account_balance')
+def request_my_account_balance():
+    miner_ip = random.choice(LIST_OF_MINER_IP)
+    try:
+        response = json.loads(requests.get(
+            "http://" + miner_ip + "/account_balance/" + PUBLIC_KEY_STRING).text)
+        return jsonify(response)
+    except:
+        return jsonify("No coins in account yet")
+
+
+@app.route('/account_balance/<public_key>')
+def request_account_balance(public_key):
+    miner_ip = random.choice(LIST_OF_MINER_IP)
+    try:
+        response = json.loads(requests.get(
+            "http://" + miner_ip + "/account_balance/" + public_key).text)
+        return jsonify(response)
+    except:
+        return jsonify("Cannot find account")
 
 # To broadcast to all miners when transaction is created
 @app.route('/send_transaction', methods=['POST'])
@@ -221,26 +236,11 @@ def verify_Transaction(txid):
     return jsonify("TXID not found")
 
 
-@app.route('/account_balance/<public_key>')
-def request_account_balance(public_key):
-    miner_ip = random.choice(LIST_OF_MINER_IP)
-    try:
-        response = json.loads(requests.get(
-            "http://" + miner_ip + "/account_balance/" + public_key).text)
-        return jsonify(response)
-    except:
-        return jsonify("Cannot find account")
-
-
-@app.route('/account_balance')
-def request_my_account_balance():
-    miner_ip = random.choice(LIST_OF_MINER_IP)
-    try:
-        response = json.loads(requests.get(
-            "http://" + miner_ip + "/account_balance/" + PUBLIC_KEY_STRING).text)
-        return jsonify(response)
-    except:
-        return jsonify("No coins in account yet")
+@app.route('/block_header', methods=['POST'])
+def new_block_header_network():
+    new_block_header = pickle.loads(request.get_data())
+    spv_client.spv_blockchain.network_add(new_block_header)
+    return ""
 
 
 if __name__ == '__main__':

@@ -141,7 +141,6 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                     data = pickle.dumps(sending_block, protocol=2)
                     for miner_ip in LIST_OF_MINER_IP:
                         send_failed = True
-                        # Retry until peer receives, idk i think prof say ok right? assume all in stable network lel
                         while send_failed:
                             try:
                                 requests.post("http://"+miner_ip +
@@ -154,7 +153,6 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                     data = pickle.dumps(sending_spv_block, protocol=2)
                     for spv_ip in LIST_OF_SPV_IP:
                         send_failed = True
-                        # Retry until peer receives, idk i think prof say ok right? assume all in stable network lel
                         while send_failed:
                             try:
                                 requests.post("http://"+spv_ip +
@@ -175,7 +173,6 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                             block_data = pickle.dumps(block, protocol=2)
                             for miner_ip in LIST_OF_MINER_IP:
                                 send_failed = True
-                                # Retry until peer receives, idk i think prof say ok right? assume all in stable network lel
                                 while send_failed:
                                     try:
                                         requests.post("http://"+miner_ip +
