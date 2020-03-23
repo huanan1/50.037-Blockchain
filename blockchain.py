@@ -41,7 +41,7 @@ class Block:
 class BlockChain:
     # chain is a dictionary -> {hash header (key): header metadata of blocks (value)}
     chain = dict()
-    TARGET = b"\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+    TARGET = b"\x00\x00\x0f\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
     last_hash = None
     # cleaned_keys is an ordered list of all the header hashes, only updated on BlockChain.resolve() call
     cleaned_keys = []
@@ -211,9 +211,11 @@ class BlockChain:
             if hash_value not in self.cleaned_keys:
                 dropped_blocks[hash_value] = self.chain[hash_value]
         cleared_transactions = []
-        for hash_value in self.cleaned_keys:
-            for i in self.chain[hash_value].transactions.leaf_set:
-                cleared_transactions.append(i)
+        # Do not rebroadcast any transactions with 10 confirmations
+        if len(self.cleaned_keys) > 10:
+            for hash_value in self.cleaned_keys[:-10]:
+                for i in self.chain[hash_value].transactions.leaf_set:
+                    cleared_transactions.append(i)
         return dropped_blocks, cleared_transactions
 
     # Resolve forks and find the longest blockchain
