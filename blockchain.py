@@ -204,6 +204,7 @@ class BlockChain:
                             time.sleep(0.1)
         return True
 
+    # To obtain the blocks that have been dropped after fork resolution for transaction rebroadcast
     def find_dropped_blocks(self):
         dropped_blocks = dict()
         for hash_value in self.chain:
