@@ -87,12 +87,15 @@ spv_client = SPVClient(PRIVATE_KEY, PUBLIC_KEY,
                        PUBLIC_KEY_STRING, spv_blockchain)
 
 
+# Returns an ordered list of header hashes of the longest chain from genesis block
 @app.route('/request_blockchain_header_hash')
 def request_blockchain_headers():
     spv_client.spv_blockchain.resolve()
     return jsonify({"blockchain_headers_hash": spv_client.spv_blockchain.cleaned_keys})
 
 
+# Returns an ordered list of blocks of the longest chain from genesis block
+# For SPVClient, the list of ordered transactions for every block is not included
 @app.route('/request_blockchain')
 def request_blockchain():
     spv_client.spv_blockchain.resolve()
@@ -111,6 +114,8 @@ def request_blockchain():
     return jsonify(lst_chain)
 
 
+# Returns an unordered list of all blocks within client
+# For SPVClient, the list of ordered transactions for every block is not included
 @app.route('/request_full_blockchain')
 def request_full_blockchain():
     chain = spv_client.spv_blockchain.chain
@@ -128,6 +133,8 @@ def request_full_blockchain():
     return jsonify(dic_chain)
 
 
+# Returns full information for that particular block, identified by its header hash
+# For SPVClient, the list of ordered transactions in the block is not included
 @app.route('/request_block/<header_hash>')
 def request_block(header_hash):
     chain = spv_client.spv_blockchain.chain
@@ -145,6 +152,8 @@ def request_block(header_hash):
     return jsonify(block_dictionary)
 
 
+# Returns amount of coins in the queried SPVClient or Miner's wallet
+# SPVClient will will retrieve information from a random full node/ Miner
 @app.route('/account_balance')
 def request_my_account_balance():
     miner_ip = random.choice(LIST_OF_MINER_IP)
@@ -156,6 +165,8 @@ def request_my_account_balance():
         return jsonify("No coins in account yet.")
 
 
+# Returns amount of coins of any existing wallet in the network
+# Search based on the wallet's public key
 @app.route('/account_balance/<public_key>')
 def request_account_balance(public_key):
     miner_ip = random.choice(LIST_OF_MINER_IP)
@@ -200,6 +211,9 @@ def createTransaction():
     return jsonify(new_transaction.to_json())
 
 
+# Returns information about the particular transactions, including number of confirmations
+# SPVClient will ask a random full node/ Miner for merkle tree's proof and verify locally with 
+# the merkle tree root and header hashes
 @app.route('/verify_transaction/<txid>', methods=['GET'])
 def verify_Transaction(txid):
     miner_ip = random.choice(LIST_OF_MINER_IP)
@@ -222,7 +236,7 @@ def verify_Transaction(txid):
     entry_dictionary = json.loads(entry)
     if verify:
         if entry_dictionary["txid"] != txid:
-            return ("Received transaction ID does not match sent TXID.")
+            return jsonify("Received transaction ID does not match sent TXID.")
 
         spv_client.spv_blockchain.resolve()
         for count, i in enumerate(spv_client.spv_blockchain.cleaned_keys):
@@ -236,6 +250,7 @@ def verify_Transaction(txid):
     return jsonify("TXID not found.")
 
 
+# Called by Miners, able to receive SPVBlock objects as Pickles from other Miners in body
 @app.route('/block_header', methods=['POST'])
 def new_block_header_network():
     new_block_header = pickle.loads(request.get_data())
