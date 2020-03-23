@@ -6,6 +6,13 @@ import ecdsa
 import binascii
 import os
 
+'''
+This function is used to simluate transactions across the network, where a random amount is being sent to the
+network via a POST request. Along with the random amount is the public key that the amount is being sent to.
+This allows us to replicate the real transactions that are sent over the the network, for both miners as well
+as SPVClients.
+'''
+
 list_of_ports = []
 list_of_ips = []
 list_of_wallets = []

@@ -1,14 +1,14 @@
 import os
+import sys
 import copy
 import time
-import sys
 import getopt
 
-# This file is only for local testing, if using multiple comps, don't use
+'''
+This file is only for local testing. If using multiple comps, don't use!
+'''
 
 # Parsing arguments when entered via CLI
-
-
 def parse_arguments(argv):
     selfish = False
     double_spending = False
@@ -34,10 +34,11 @@ def parse_arguments(argv):
     return selfish, double_spending
 
 
-# deploys single selfish miner if true
+# Deploys single selfish miner if true
 SELFISH, DOUBLE_SPENDING = parse_arguments(sys.argv[1:])
 
-# Reads LOCAL ports to use via miner_ports.txt
+
+# Reads LOCAL ports to use via ports_miner.txt
 f = open("ports_miner.txt", "r")
 list_of_miner_ports = []
 list_of_miner_ips = []
@@ -53,7 +54,8 @@ for line in f:
         list_of_miner_wallets.append("NO_WALLET")
 f.close()
 
-# Reads LOCAL ports to use via miner_ports.txt
+
+# Reads LOCAL ports to use via ports_spv.txt
 f = open("ports_spv.txt", "r")
 list_of_spv_ports = []
 list_of_spv_ips = []
@@ -91,8 +93,10 @@ elif SELFISH:
 # Color args
 colors = ['w', 'r', 'g', 'y', 'b', 'm', 'c']
 
+
 if DOUBLE_SPENDING or SELFISH:
     print("Restricting to only 2 miners for demostration.")
+
 
 for count, i in enumerate(list_of_miner_ports):
     # Reads file
