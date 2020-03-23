@@ -15,14 +15,15 @@ def parse_arguments(argv):
     mode = 1
     try:
         opts, args = getopt.getopt(
-            argv, "hf:d:", ["selfish=","double_spending="])
+            argv, "hf:d:", ["selfish=", "double_spending="])
     # Only port and input is mandatory
     except getopt.GetoptError:
         print('build_miners_local_automation.py -f <1 if one selfish miner> -d <1 for double spending demo>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('build_miners_local_automation.py -f <1 if one selfish miner> -d <1 for double spending demo>')
+            print(
+                'build_miners_local_automation.py -f <1 if one selfish miner> -d <1 for double spending demo>')
             sys.exit()
         elif opt in ("-f", "--selfish"):
             if arg == "1":
@@ -37,7 +38,7 @@ def parse_arguments(argv):
 SELFISH, DOUBLE_SPENDING = parse_arguments(sys.argv[1:])
 
 # Reads LOCAL ports to use via miner_ports.txt
-f = open("miner_ports.txt", "r")
+f = open("ports_miner.txt", "r")
 list_of_miner_ports = []
 list_of_miner_ips = []
 list_of_miner_wallets = []
@@ -53,7 +54,7 @@ for line in f:
 f.close()
 
 # Reads LOCAL ports to use via miner_ports.txt
-f = open("spv_ports.txt", "r")
+f = open("ports_spv.txt", "r")
 list_of_spv_ports = []
 list_of_spv_ips = []
 list_of_spv_wallets = []
@@ -73,16 +74,32 @@ for i in list_of_spv_ips:
     f.write(i+"\n")
 f.close()
 
-f = open("miner_ip.txt", "w+")
-for i in list_of_miner_ips:
-    f.write(i+"\n")
-f.close()
-
+if not SELFISH:
+    f = open("miner_ip.txt", "w+")
+    for i in list_of_miner_ips:
+        f.write(i+"\n")
+    f.close()
+elif SELFISH:
+    f = open("miner_ip.txt", "w+")
+    count = 0
+    for i in list_of_miner_ips:
+        count += 1
+        f.write(i+"\n")
+        if count >= 2:
+            break
+    f.close()
 # Color args
 colors = ['w', 'r', 'g', 'y', 'b', 'm', 'c']
+
+if DOUBLE_SPENDING or SELFISH:
+    print("Restricting to only 2 miners for demostration.")
+
 for count, i in enumerate(list_of_miner_ports):
     # Reads file
-    if DOUBLE_SPENDING:
+    if not (DOUBLE_SPENDING or SELFISH):
+        os.system("python3 miner_manage.py -p {0} -m miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(
+            i, colors[count % len(colors)], list_of_miner_wallets[count]))
+    elif DOUBLE_SPENDING:
         if count == 0:
             os.system("python3 double_spend.py --port {0} --ip_other {1} --attacker --color r&".format(
                 i, "127.0.0.1:"+list_of_miner_ports[1]
@@ -93,21 +110,23 @@ for count, i in enumerate(list_of_miner_ports):
             ))
         else:
             break
-    elif not SELFISH:
-        os.system("python3 miner_manage.py -p {0} -m miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(
-            i, colors[count % len(colors)], list_of_miner_wallets[count]))
-    else:
+    elif SELFISH:
         if count == 0:
-            os.system("python3 miner_manage.py -p {0} -m miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2 -f 1&".format(
-                i, colors[count % len(colors)], list_of_miner_wallets[count]))
+            os.system("python3 miner_manage.py -p {0} -m miner_ip.txt -s spv_ip.txt -c r -w {1} -d 2 -f 1&".format(
+                i, list_of_miner_wallets[count]))
+        elif count == 1:
+            os.system("python3 miner_manage.py -p {0} -m miner_ip.txt -s spv_ip.txt -c g -w {1} -d 2&".format(
+                i, list_of_miner_wallets[count]))
         else:
-            os.system("python3 miner_manage.py -p {0} -m miner_ip.txt -s spv_ip.txt -c {1} -w {2} -d 2&".format(
-                i, colors[count % len(colors)], list_of_miner_wallets[count]))
-    # Removes file for cleanup
-    
+            break
+    else:
+        print("Wait, how did you reach here?")
+
 
 for count, i in enumerate(list_of_spv_ports):
-    os.system("python3 SPVClient.py -p {0} -m miner_ip.txt -w {1}&".format(
-            i, "WALLET_KEY"))
-time.sleep(1*(len(list_of_miner_ports)+ len(list_of_spv_ports)))
-os.system('rm miner_ip.txt')
+    os.system("python3 spv_client.py -p {0} -m miner_ip.txt -w {1}&".format(
+        i, list_of_spv_wallets[count]))
+# Time delay for deployment
+time.sleep(1*(len(list_of_miner_ports) + len(list_of_spv_ports)))
+# Removes file for cleanup
+os.system('rm miner_ip.txt spv_ip.txt')

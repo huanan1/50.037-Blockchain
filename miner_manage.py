@@ -13,7 +13,7 @@ import json
 from ecdsa import SigningKey
 from flask import Flask, request, jsonify
 from multiprocessing import Process, Queue
-from spv_block import SPVBlock
+from spv_blockchain import SPVBlock
 import json
 from miner import Miner
 
@@ -112,12 +112,16 @@ else:
 PUBLIC_KEY = PRIVATE_KEY.get_verifying_key()
 PUBLIC_KEY_STRING = binascii.hexlify(PUBLIC_KEY.to_string()).decode()
 
+
 def start_mining(block_queue, transaction_queue, blockchain_request_queue, blockchain_reply_queue):
     blockchain = BlockChain(LIST_OF_MINER_IP)
     miner = Miner(blockchain, PUBLIC_KEY)
     # merkletree = create_sample_merkle()
     miner_status = False
     list_of_blocks_selfish = []
+    SELFISH_LENGTH = 5
+    list_of_collected_selfish_blocks = []
+    selfish_flush = False
     # Infinite loop
     while True:
         #merkletree, ledger = create_sample_merkle()
@@ -166,12 +170,13 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                                 print("Send failed", spv_ip)
                                 time.sleep(0.2)
                 # If selfish miner
-                else:
-                    mine_or_recv += "SELFISH MINING\n"
+                elif SELFISH:
+                    mine_or_recv += "\nSELFISH MINING\n"
                     list_of_blocks_selfish.append(sending_block)
-                    # It will send only every 2 blocks
-                    if len(list_of_blocks_selfish) >= 2:
+                    # It will send only every n blocks
+                    if len(list_of_blocks_selfish) >= SELFISH_LENGTH:
                         mine_or_recv += "SENDING SELFISH BLOCKS\n"
+                        selfish_flush = True
                         for block in list_of_blocks_selfish:
                             block_data = pickle.dumps(block, protocol=2)
                             for miner_ip in LIST_OF_MINER_IP:
@@ -192,10 +197,29 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                 block_queue_status_initial = block_queue.empty()
                 while not block_queue.empty():
                     mine_or_recv += "Block RECEIVED "
-                    # If detected, add new block to blockchain
-                    # TODO add rebroadcast of signal??
                     new_block = block_queue.get()
-                    miner.network_block(new_block)
+                    if not SELFISH:
+                        miner.network_block(new_block)
+                    elif SELFISH:
+                        list_of_collected_selfish_blocks.append(new_block)
+                        if len(list_of_collected_selfish_blocks) > SELFISH_LENGTH or selfish_flush:
+                            for i in list_of_collected_selfish_blocks:
+                                miner.network_block(i)
+                            for block in list_of_blocks_selfish:
+                                block_data = pickle.dumps(block, protocol=2)
+                                for miner_ip in LIST_OF_MINER_IP:
+                                    send_failed = True
+                                    while send_failed:
+                                        try:
+                                            requests.post("http://"+miner_ip +
+                                                          "/block", data=block_data)
+                                            send_failed = False
+                                        except:
+                                            time.sleep(0.1)
+                            miner.blockchain.resolve()
+                            list_of_collected_selfish_blocks = []
+                            list_of_blocks_selfish = []
+                            selfish_flush = False
                     mine_or_recv += binascii.hexlify(
                         new_block.header_hash()).decode() + " "
                 if not block_queue_status_initial:
@@ -296,10 +320,10 @@ def verify_transaction_from_spv():
     return ""
 
 
-@app.route('/request_blockchain_headers')
+@app.route('/request_blockchain_header_hash')
 def request_blockchain_headers():
     blockchain_request_queue.put(None)
-    return jsonify({"blockchain_headers": blockchain_reply_queue.get()[0]})
+    return jsonify({"blockchain_headers_hash": blockchain_reply_queue.get()[0]})
 
 
 @app.route('/request_full_blockchain')
@@ -317,13 +341,36 @@ def request_full_blockchain():
             block.hash_tree_root).decode()
         block_dictionary["timestamp"] = block.timestamp
         block_dictionary["nonce"] = block.nonce
-        # TODO Modify transactions when the real transactions come
         transaction_list = []
         for i in block.transactions.leaf_set:
             transaction_list.append(i.decode())
         block_dictionary["transactions"] = transaction_list
         dic_chain[block_dictionary["header_hash"]] = block_dictionary
     return jsonify(dic_chain)
+
+
+@app.route('/request_blockchain')
+def request_blockchain():
+    blockchain_request_queue.put(None)
+    queue_reply = blockchain_reply_queue.get()
+    cleaned_keys, chain = queue_reply[0], queue_reply[1]
+    lst_chain = []
+    for i in cleaned_keys:
+        block_dictionary = dict()
+        block = chain[i]
+        block_dictionary["header_hash"] = binascii.hexlify(
+            block.header_hash()).decode()
+        block_dictionary["previous_header_hash"] = block.previous_header_hash
+        block_dictionary["hash_tree_root"] = binascii.hexlify(
+            block.hash_tree_root).decode()
+        block_dictionary["timestamp"] = block.timestamp
+        block_dictionary["nonce"] = block.nonce
+        transaction_list = []
+        for i in block.transactions.leaf_set:
+            transaction_list.append(i.decode())
+        block_dictionary["transactions"] = transaction_list
+        lst_chain.append(block_dictionary)
+    return jsonify(lst_chain)
 
 
 @app.route('/request_block/<header_hash>')
@@ -341,7 +388,6 @@ def request_block(header_hash):
         block.hash_tree_root).decode()
     block_dictionary["timestamp"] = block.timestamp
     block_dictionary["nonce"] = block.nonce
-    # TODO Modify transactions when the real transactions come
     transaction_list = []
     for i in block.transactions.leaf_unset:
         transaction_list.append(i.decode())
@@ -358,7 +404,19 @@ def request_account_balance(public_key):
         reply = {"public_key": public_key, "amount": ledger[public_key]}
         return jsonify(reply)
     except:
-        return "Cannot find account"
+        return jsonify("Cannot find account or no coins in account yet")
+
+
+@app.route('/account_balance')
+def request_my_account_balance():
+    blockchain_request_queue.put(None)
+    ledger = blockchain_reply_queue.get()[2]
+    try:
+        reply = {"public_key": PUBLIC_KEY_STRING,
+                 "amount": ledger[PUBLIC_KEY_STRING]}
+        return jsonify(reply)
+    except:
+        return jsonify("No coins in account yet")
 
 
 @app.route('/send_transaction', methods=['POST'])
@@ -387,15 +445,6 @@ def request_send_transaction():
             except:
                 time.sleep(0.1)
     not_sent = True
-    while not_sent:
-        try:
-            requests.post(
-                url="http://127.0.0.1:" + MY_PORT + "/transaction",
-                data=new_transaction.to_json()
-            )
-            not_sent = False
-        except:
-            time.sleep(0.1)
     return jsonify(new_transaction.to_json())
 
 
@@ -403,5 +452,5 @@ if __name__ == '__main__':
     p = Process(target=start_mining, args=(block_queue, transaction_queue,
                                            blockchain_request_queue, blockchain_reply_queue,))
     p.start()
-    app.run(host='0.0.0.0', debug=True, use_reloader=False, port=MY_PORT)
+    app.run(debug=True, use_reloader=False, port=MY_PORT)
     p.join()

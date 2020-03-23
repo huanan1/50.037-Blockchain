@@ -5,6 +5,7 @@ import hashlib
 import random
 import math
 
+
 class MerkleTree:
 
     def __init__(self):
@@ -56,8 +57,6 @@ class MerkleTree:
             # elements is what is returned
             elements = []
             # if it matches
-            # print("TESTING")
-            # print(i == str(check).encode(), i, str(check).encode())
             if i == str(check).encode():
                 # make both partner and current equal to the 'starting position'
                 partner_node = count
@@ -119,6 +118,7 @@ def verify_proof(entry, proof, root):
     if non_leaf == root:
         return True
     return False
+
 
 merkletree = MerkleTree()
 
