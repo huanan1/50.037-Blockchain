@@ -133,7 +133,7 @@ Returns amount of coins in the queried SPV or Miner's wallet
 
 **Miner** and **SPV**
 
-Returns amount of coins in that particular account
+Returns amount of coins of any existing wallet in the network, search based on the wallet's public key
 
 **Note:** Miner will retrieve information locally, while SPV will ask a random full node/Miner
 
