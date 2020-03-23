@@ -37,6 +37,17 @@ The format in the current repo is as follows:
 ### Network deployment
 There are two kinds of clients to be deployed, miners and SPV clients, using `miner_manage.py` and `spv_client.py` respectively.
 
+Change a line of code in both `miner_manage.py` and `spv_client.py` in order to allow it to communicate with peers on the network.
+
+Change
+```python
+app.run(debug=True, use_reloader=False, port=MY_PORT)
+```
+to
+```python
+app.run(host='0.0.0.0', debug=True, use_reloader=False, port=MY_PORT)
+```
+
 #### Miner
 `miner_manage.py`
 | Argument          | Description                                                | Example      | Additional Notes                                                                         |
