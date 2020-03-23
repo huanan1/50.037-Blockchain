@@ -22,6 +22,7 @@ from merkle_tree import MerkleTree, verify_proof
 
 
 app = Flask(__name__)
+
 # This section is to get rid of Flask logging messages
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
@@ -92,16 +93,20 @@ def parse_arguments(argv):
 # Get data from arguments
 MY_PORT, LIST_OF_MINER_IP, LIST_OF_SPV_IP, COLOR, MODE, SELFISH, PRIVATE_KEY = parse_arguments(
     sys.argv[1:])
-# MY_IP will be a single string in the form of "127.0.0.1:5000"
-# LIST_OF_MINER_IP will be a list of strings in the form of ["127.0.0.1:5000","127.0.0.1:5001","127.0.0.1:5002"]
+# MY_PORT will be a single string in the form of "5000"
+# LIST_OF_MINER_IP and LIST_OF_SPV_IP will be a list of strings in the form of ["127.0.0.1:5000","127.0.0.1:5001","127.0.0.1:5002"]
 # COLOR is color of text using colorama library
 # MODE is either 1 or 2, 1 is full details, 2 is shortform
 # SELFISH if True, this miner will be a selfish miner
+# PRIVATE_KEY is a SigningKey in String format
 
+
+# Removes own IP from list
 for count, i in enumerate(LIST_OF_MINER_IP):
     if i == ("127.0.0.1:" + MY_PORT):
         del LIST_OF_MINER_IP[count]
 
+# Converts PRIVATE_KEY from String to Signing key, and generates PUBLIC_KEY
 if PRIVATE_KEY is None:
     PRIVATE_KEY = ecdsa.SigningKey.generate()
 else:
@@ -110,7 +115,7 @@ else:
 PUBLIC_KEY = PRIVATE_KEY.get_verifying_key()
 PUBLIC_KEY_STRING = binascii.hexlify(PUBLIC_KEY.to_string()).decode()
 
-
+# Starts the mining loop
 def start_mining(block_queue, transaction_queue, blockchain_request_queue, blockchain_reply_queue):
     blockchain = BlockChain(LIST_OF_MINER_IP)
     miner = Miner(blockchain, PUBLIC_KEY)
@@ -216,12 +221,9 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
                 if not block_queue_status_initial:
                     mine_or_recv += "\n"
                     break
+                # Checks if any of the endpoints requested a copy of the blockchain
                 if not blockchain_request_queue.empty():
-                    print("Received request of blockchain.")
                     blockchain_request_queue.get()
-                    print(blockchain.last_block())
-                    print(blockchain.retrieve_ledger())
-
                     blockchain_reply_queue.put((copy.deepcopy(blockchain.cleaned_keys), copy.deepcopy(blockchain.chain),
                                                 copy.deepcopy(blockchain.retrieve_ledger())))
         # Section runs if the miner found a block or receives a block that has been broadcasted
@@ -229,19 +231,19 @@ def start_mining(block_queue, transaction_queue, blockchain_request_queue, block
               (str(miner.blockchain) if MODE == 1 else str(miner.blockchain).split("~~~\n")[1]))
 
 
-# Queue objects for passing stuff between processes
+# Queue objects for passing stuff between Flask and mining process
 block_queue = Queue()
 transaction_queue = Queue()
 blockchain_request_queue = Queue()
 blockchain_reply_queue = Queue()
 
-
+# Returns an ordered list of header hashes of the longest chain from genesis block
 @app.route('/request_blockchain_header_hash')
 def request_blockchain_headers():
     blockchain_request_queue.put(None)
     return jsonify({"blockchain_headers_hash": blockchain_reply_queue.get()[0]})
 
-
+# Returns an ordered list of blocks of the longest chain from genesis block
 @app.route('/request_blockchain')
 def request_blockchain():
     blockchain_request_queue.put(None)
@@ -265,7 +267,7 @@ def request_blockchain():
         lst_chain.append(block_dictionary)
     return jsonify(lst_chain)
 
-
+# Returns an unordered list of all blocks within client
 @app.route('/request_full_blockchain')
 def request_full_blockchain():
     blockchain_request_queue.put(None)
@@ -288,7 +290,7 @@ def request_full_blockchain():
         dic_chain[block_dictionary["header_hash"]] = block_dictionary
     return jsonify(dic_chain)
 
-
+# Returns full information for that particular block, identified by its header hash
 @app.route('/request_block/<header_hash>')
 def request_block(header_hash):
     blockchain_request_queue.put(None)
@@ -310,7 +312,7 @@ def request_block(header_hash):
     block_dictionary["transactions"] = transaction_list
     return jsonify(block_dictionary)
 
-
+# Returns amount of coins in the queried SPVClient or Miner's wallet
 @app.route('/account_balance')
 def request_my_account_balance():
     blockchain_request_queue.put(None)
@@ -322,7 +324,8 @@ def request_my_account_balance():
     except:
         return jsonify("No coins in account yet")
 
-
+# Returns amount of coins of any existing wallet in the network
+# Search based on the wallet's public key
 @app.route('/account_balance/<public_key>')
 def request_account_balance(public_key):
     blockchain_request_queue.put(None)
@@ -334,7 +337,7 @@ def request_account_balance(public_key):
     except:
         return jsonify("Cannot find account or no coins in account yet")
 
-
+# To broadcast to all miners when transaction is created
 @app.route('/send_transaction', methods=['POST'])
 def request_send_transaction():
     receiver_public_key = request.args.get('receiver', '')
@@ -363,7 +366,7 @@ def request_send_transaction():
     not_sent = True
     return jsonify(new_transaction.to_json())
 
-
+# Returns information about the particular transactions, including number of confirmations
 @app.route('/verify_transaction/<txid>', methods=['GET'])
 def verify_Transaction(txid):
     blockchain_request_queue.put(None)
@@ -388,7 +391,7 @@ def verify_Transaction(txid):
                 return jsonify(reply)
     return jsonify("No TXID found.")
 
-
+# Called by SPV to get the merkle tree proof data from Miner
 @app.route('/verify_transaction_from_spv', methods=['POST'])
 def verify_transaction_from_spv():
     data = request.data.decode()
@@ -414,14 +417,14 @@ def verify_transaction_from_spv():
                 return jsonify(reply)
     return ""
 
-
+# Called by other Miners, able to receive Block objects as Pickles from other Miners in body
 @app.route('/block', methods=['POST'])
 def new_block_network():
     new_block = pickle.loads(request.get_data())
     block_queue.put(new_block)
     return ""
 
-
+# Called by other Miners and SPV, able to receive Transactions as json in body
 @app.route('/transaction', methods=['POST'])
 def new_transaction_network():
     new_transaction = Transaction.from_json(request.data.decode())

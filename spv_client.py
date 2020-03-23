@@ -53,9 +53,13 @@ def parse_arguments(argv):
 
     return my_port, list_of_miner_ip, private_key
 
-
+# Get data from arguments
 MY_PORT, LIST_OF_MINER_IP, PRIVATE_KEY = parse_arguments(sys.argv[1:])
+# MY_PORT will be a single string in the form of "5000"
+# LIST_OF_MINER_IP will be a list of strings in the form of ["127.0.0.1:5000","127.0.0.1:5001","127.0.0.1:5002"]
+# PRIVATE_KEY is a SigningKey in String format
 
+# Converts PRIVATE_KEY from String to Signing key, and generates PUBLIC_KEY
 if PRIVATE_KEY is None:
     PRIVATE_KEY = ecdsa.SigningKey.generate()
 else:
@@ -212,7 +216,7 @@ def createTransaction():
 
 
 # Returns information about the particular transactions, including number of confirmations
-# SPVClient will ask a random full node/ Miner for merkle tree's proof and verify locally with 
+# SPVClient will ask a random full node/ Miner for merkle tree's proof and verify locally with
 # the merkle tree root and header hashes
 @app.route('/verify_transaction/<txid>', methods=['GET'])
 def verify_Transaction(txid):
